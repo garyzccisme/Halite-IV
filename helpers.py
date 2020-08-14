@@ -32,7 +32,7 @@ def estimate_gain(halite, dis, t, collect_rate=0.25, regen_rate=0.02):
         # Ship costs (dis) rounds to arrive destination, uses (t - dis) rounds to collect halite
         return new_halite * (1 - (1 - collect_rate) ** (t - dis))
 
-def standarize_pos(pos, size):
+def unify_pos(pos, size):
     """
     Convert position into standard one.
     Exmaple: Given size = 5, Point(-2, -7) -> Point(3, 3)
