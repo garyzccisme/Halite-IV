@@ -1,3 +1,5 @@
+import random
+
 from kaggle_environments.envs.halite.helpers import *
 import numpy as np
 
