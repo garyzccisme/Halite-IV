@@ -106,7 +106,7 @@ class BronzeBot:
 
     def command(self, ship, radar_dis=2):
         """
-        For each turn, udpate action of each ship.
+        For each turn, update action of each ship.
         """
         # Before giving action, do radar first
         self.radar(ship.position, radar_dis)
@@ -120,7 +120,7 @@ class BronzeBot:
         # Strategy 2: if ship halite is lower than 500 and radar is clear, turn DEPOSIT to EXPLORE
         if self.ship_state[ship.id] == 'DEPOSIT':
             shipyard_pos = np.array(np.where(self.unit_map >= 2)).T
-            nearest_shipyard_pos = shipyards[argmin(np.abs(shipyards_pos - unit.position).sum(axis=1))]
+            nearest_shipyard_pos = shipyard_pos[np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))]
             self.navigate(ship, Point(tuple(nearest_shipyard_pos)))
 
         else:
@@ -133,7 +133,7 @@ class BronzeBot:
                     self.command(ship, radar_dis + 1)
                 else:
                     candidate = []
-                    for pos, free_halite in radat['free_halite']:
+                    for pos, free_halite in radar['free_halite']:
                         if free_halite[-1] == max_free_halite:
                             candidate.append(pos)
 
@@ -142,6 +142,6 @@ class BronzeBot:
                     self.navigate(ship, Point(des))
 
             # Strategy 1: if ship halite reaches 500, turn COLLECT to DEPOSIT
-            # Strategy 2: if enemy ship shows in radar, turn COLLECT TO DEPOST
+            # Strategy 2: if enemy ship shows in radar, turn COLLECT TO DEPOSIT
             elif self.ship_state[ship.id] == 'COLLECT':
                 return
