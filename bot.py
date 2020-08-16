@@ -17,6 +17,7 @@ class BronzeBot:
         self.unit_map = None
 
         self.unit_radar = {}
+        self.radar_params = {}
         self.ship_state = {}
 
     def update_map(self):
@@ -40,6 +41,7 @@ class BronzeBot:
                 for index, _ in ships.values():
                     self.unit_map[index_to_position(index, self.size)] += -1
 
+    # TODO: refactor for efficiency
     def radar(self, unit, dis=2):
         """
         Radar Scaning for ship & shipyard.
@@ -100,18 +102,20 @@ class BronzeBot:
         """
         return
 
-    def command(self, ship):
+    def command(self, ship, radar_dis=2):
         """
-        MAIN FUNCTION
         For each turn, udpate action of each ship.
         """
-        self.radar(ship.position, 2)
+        # Before giving action, do radar first
+        self.radar(ship.position, radar_dis)
+        radar = self.unit_radar[ship.id]
+
+        # If ship state is None (ship in shipyard), assign EXPLORE to ship state
         if ship.id not in self.ship_state:
             self.ship_state[ship.id] = 'EXPLORE'
-        else:
-            if self.ship_state[ship.id] == 'EXPLORE':
-                return
-            if self.ship_state[ship.id] == 'COLLECT':
-                return
-            if self.ship_state[ship.id] == 'DEPOSIT':
-                return
+
+        # If ship state is DEPOSIT, then navigate to nearest shipyard
+        if self.ship_state[ship.id] == 'DEPOSIT':
+            shipyard_pos = np.array(np.where(self.unit_map >= 2)).T
+            nearest_shipyard_pos = shipyards[argmin(np.abs(shipyards_pos - unit.position).sum(axis=1))]
+            self.navigate(ship, Point(tuple(nearest_shipyard_pos)))
