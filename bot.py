@@ -117,7 +117,7 @@ class BronzeBot:
             self.ship_state[ship.id] = 'EXPLORE'
 
         # Strategy 1: if ship state is DEPOSIT, navigate to nearest shipyard
-        # Strategy 2: if ship halite is lower than 500 and radar is clear, turn DEPOSITE to EXPLORE
+        # Strategy 2: if ship halite is lower than 500 and radar is clear, turn DEPOSIT to EXPLORE
         if self.ship_state[ship.id] == 'DEPOSIT':
             shipyard_pos = np.array(np.where(self.unit_map >= 2)).T
             nearest_shipyard_pos = shipyards[argmin(np.abs(shipyards_pos - unit.position).sum(axis=1))]
@@ -141,7 +141,7 @@ class BronzeBot:
                     des = random.choice(candidate)
                     self.navigate(ship, Point(des))
 
-            # Strategy 1: if ship halite reaches 500, turn COLLECT to DEPOSITE
-            # Strategy 2: if enemy ship shows in radar, turn COLLECT TO DEPOSTE
+            # Strategy 1: if ship halite reaches 500, turn COLLECT to DEPOSIT
+            # Strategy 2: if enemy ship shows in radar, turn COLLECT TO DEPOST
             elif self.ship_state[ship.id] == 'COLLECT':
                 return
