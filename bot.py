@@ -104,6 +104,14 @@ class BronzeBot:
         """
         return
 
+    def deposit_command(self, ship):
+        """
+        Command function for DEPOSIT ship state.
+        """
+        shipyard_pos = np.array(np.where(self.unit_map >= 2)).T
+        nearest_shipyard_pos = shipyard_pos[np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))]
+        self.navigate(ship, Point(tuple(nearest_shipyard_pos)))
+
     def command(self, ship, radar_dis=2):
         """
         For each turn, update action of each ship.
