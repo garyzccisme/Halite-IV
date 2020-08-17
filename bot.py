@@ -112,6 +112,16 @@ class BronzeBot:
         nearest_shipyard_pos = shipyard_pos[np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))]
         self.navigate(ship, Point(tuple(nearest_shipyard_pos)))
 
+    def security_check(self, ship, dis=1):
+        """
+        Check if ship is clear in given distance.
+        """
+        radar = self.unit_radar[ship.id]
+        for enemy_pos in radar['enemy_ship']:
+            if cal_dis(ship.position, enemy_pos) <= dis:
+                return False
+        return True
+
     def command(self, ship, radar_dis=2, deposit_halite=500):
         """
         For each turn, update action of each ship.
