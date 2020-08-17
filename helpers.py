@@ -14,11 +14,13 @@ def index_to_position(index: int, size: int):
     y, x = divmod(index, size)
     return Point(x, (size - y - 1))
 
+
 def cal_dis(x, y):
     """
     Calculate Manhattan Distance for two points
     """
     return sum(abs(x - y))
+
 
 def estimate_gain(halite, dis, t, collect_rate=0.25, regen_rate=0.02):
     """
@@ -31,6 +33,7 @@ def estimate_gain(halite, dis, t, collect_rate=0.25, regen_rate=0.02):
         new_halite = halite * (1 + regen_rate) ** max(0, dis - 1)
         # Ship costs (dis) rounds to arrive destination, uses (t - dis) rounds to collect halite
         return new_halite * (1 - (1 - collect_rate) ** (t - dis))
+
 
 def unify_pos(pos, size):
     """
