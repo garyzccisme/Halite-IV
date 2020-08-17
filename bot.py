@@ -122,7 +122,7 @@ class BronzeBot:
                 return False
         return True
 
-    def command(self, ship, radar_dis=2, deposit_halite=500):
+    def command(self, ship, radar_dis=2, deposit_halite=500, security_dis=1):
         """
         For each turn, update action of each ship.
         """
@@ -134,6 +134,7 @@ class BronzeBot:
         if ship.id not in self.ship_state:
             self.ship_state[ship.id] = 'EXPLORE'
 
+        # DEPOSIT
         # Strategy 1: if ship state is DEPOSIT, navigate to nearest shipyard
         # Strategy 2: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE
         if self.ship_state[ship.id] == 'DEPOSIT':
@@ -141,14 +142,14 @@ class BronzeBot:
             if ship.halite >= deposit_halite:
                 self.deposit_command(ship)
             else:
-                for enemy_pos in radar['enemy_ship']:
-                    if cal_dis(ship.position, enemy_pos) == 1:
-                        # Enemy is close, stick to DEPOSIT ship state
-                        self.deposit_command(ship)
-                        return
-                self.ship_state[ship.id] = 'EXPLORE'
-                self.command(ship, radar_dis, deposit_halite)
+                if self.security_check(ship, security_dis):
+                    self.ship_state[ship.id] = 'EXPLORE'
+                    self.command(ship, radar_dis, deposit_halite)
+                else:
+                    # Enemy is close, stick to DEPOSIT ship state
+                    self.deposit_command(ship)
 
+        # EXPLORE
         # Strategy: if ship state is EXPLORE, navigate to the position with max free halite
         elif self.ship_state[ship.id] == 'EXPLORE':
 
@@ -167,7 +168,13 @@ class BronzeBot:
                 des = random.choice(candidate)
                 self.navigate(ship, Point(des))
 
-        # Strategy 1: if ship halite reaches 500, turn COLLECT to DEPOSIT
+        # COLLECT
+        # Strategy 1: if ship halite reaches deposit_halite, turn COLLECT to DEPOSIT
         # Strategy 2: if enemy ship shows in radar, turn COLLECT TO DEPOSIT
         elif self.ship_state[ship.id] == 'COLLECT':
-            return
+            if ship.halite >= deposit_halite:
+                self.ship_state[ship.id] = 'DEPOSIT'
+                self.command(ship, radar_dis, deposit_halite)
+            else:
+                if self.security_check(ship, security_dis):
+                    return
