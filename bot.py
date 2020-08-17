@@ -62,7 +62,7 @@ class BronzeBot:
         for x in range(-dis, dis + 1):
             for y in range(abs(x) - dis, dis - abs(x) + 1):
 
-                scan_pos = pos + (x, y)
+                scan_pos = unify_pos(pos + (x, y), self.size)
                 cell = self.board[scan_pos]
                 halite[scan_pos] = cell.halite
 
@@ -78,6 +78,7 @@ class BronzeBot:
                         else:
                             enemy_shipyard.append(cell.position)
                 else:
+                    # To be determined
                     # Estimate halite gain in scan_pos with t [2, dis + 1] turns.
                     # The closer the cell, the more turns ship has to collect halite.
                     free_halite[scan_pos] = []
@@ -87,6 +88,7 @@ class BronzeBot:
                         )
 
         self.unit_radar[unit.id] = {
+            'dis': dis,
             'halite': halite,
             'free_halite': free_halite,
             'ally_ship': ally_ship,
@@ -100,11 +102,11 @@ class BronzeBot:
         Navigate ship to destination, give out optimal action for current turn.
         Args:
             ship: Ship
-            dest: Point, destination position
+            dest: Point, detination position
         """
-        return
+        raise NotImplementedError
 
-    def deposit_command(self, ship):
+    def course_reversal(self, ship):
         """
         Command function for DEPOSIT ship state.
         """
@@ -122,42 +124,23 @@ class BronzeBot:
                 return False
         return True
 
-    def command(self, ship, radar_dis=2, deposit_halite=500, security_dis=1):
+    def explore_command(self, ship, radar):
         """
-        For each turn, update action of each ship.
+        Command function for EXPLORE
+
+        Strategy 1: if ship state is EXPLORE, navigate to the position with max free halite
+        Strategy 2: if ship is in the max free halite position, turn EXPLORE to COLLECT
         """
-        # Before giving action, do radar first
-        self.radar(ship.position, radar_dis)
-        radar = self.unit_radar[ship.id]
+        max_free_halite = np.max(list(radar['free_halite'].values()))
 
-        # Strategy: if ship state is None (ship in shipyard), assign EXPLORE to ship state
-        if ship.id not in self.ship_state:
-            self.ship_state[ship.id] = 'EXPLORE'
-
-        # DEPOSIT
-        # Strategy 1: if ship state is DEPOSIT, navigate to nearest shipyard
-        # Strategy 2: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE
-        if self.ship_state[ship.id] == 'DEPOSIT':
-
-            if ship.halite >= deposit_halite:
-                self.deposit_command(ship)
-            else:
-                if self.security_check(ship, security_dis):
-                    self.ship_state[ship.id] = 'EXPLORE'
-                    self.command(ship, radar_dis, deposit_halite)
-                else:
-                    # Enemy is close, stick to DEPOSIT ship state
-                    self.deposit_command(ship)
-
-        # EXPLORE
-        # Strategy: if ship state is EXPLORE, navigate to the position with max free halite
-        elif self.ship_state[ship.id] == 'EXPLORE':
-
-            max_free_halite = np.max(list(radar['free_halite'].values()))
-
+        # Check if ship has arrived max free halite position
+        if radar['free_halite'][ship.position][-1] == max_free_halite:
+            # Change ship state, ship.next_action = None
+            self.ship_state[ship.id] = 'COLLECT'
+        else:
             # If there's no halite, expand radar distance
             if max_free_halite == 0:
-                self.command(ship, radar_dis + 1)
+                self.command(ship, radar['dis'] + 1)
             else:
                 candidate = []
                 for pos, free_halite in radar['free_halite']:
@@ -168,13 +151,56 @@ class BronzeBot:
                 des = random.choice(candidate)
                 self.navigate(ship, Point(des))
 
+    def command(self, ship, radar_dis=2, deposit_halite=500, security_dis=1):
+        """
+        For each turn, update action of each ship.
+        """
+        # Before giving action, do radar first
+        self.radar(ship.position, radar_dis)
+        radar = self.unit_radar[ship.id]
+
+        # DEPOSIT
+        # Strategy 1: if ship is in a shipyard, and ship.halite is 0, turn DEPOSIT to EXPLORE
+        # Strategy 2: if ship state is DEPOSIT, navigate to nearest shipyard
+        # Strategy 3: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE
+        if self.ship_state[ship.id] == 'DEPOSIT':
+
+            # If ship has deposited halite to shipyard, assign EXPLORE to ship.
+            if ship.cell.shipyard and ship.halite == 0:
+                self.ship_state[ship.id] = 'EXPLORE'
+                self.command(ship, radar_dis, deposit_halite, security_dis)
+
+            if ship.halite >= deposit_halite:
+                self.course_reversal(ship)
+            else:
+                if self.security_check(ship, security_dis):
+                    self.ship_state[ship.id] = 'EXPLORE'
+                    self.command(ship, radar_dis, deposit_halite, security_dis)
+                else:
+                    # Enemy is close, stick to DEPOSIT ship state.
+                    self.course_reversal(ship)
+
+        # EXPLORE
+        elif self.ship_state[ship.id] == 'EXPLORE':
+            self.explore_command(ship, radar)
+
         # COLLECT
         # Strategy 1: if ship halite reaches deposit_halite, turn COLLECT to DEPOSIT
         # Strategy 2: if enemy ship shows in radar, turn COLLECT TO DEPOSIT
         elif self.ship_state[ship.id] == 'COLLECT':
             if ship.halite >= deposit_halite:
                 self.ship_state[ship.id] = 'DEPOSIT'
-                self.command(ship, radar_dis, deposit_halite)
+                self.command(ship, radar_dis, deposit_halite, security_dis)
             else:
                 if self.security_check(ship, security_dis):
-                    return
+                    self.explore_command(ship, radar)
+                else:
+                    self.ship_state[ship.id] = 'DEPOSIT'
+                    self.course_reversal(ship)
+
+    def play(self):
+        """
+        Main Function
+        """
+        self.update_map()
+        raise NotImplementedError
