@@ -3,7 +3,7 @@ import random
 from kaggle_environments.envs.halite.helpers import *
 import numpy as np
 
-from helpers import *
+from helper import *
 
 
 class BronzeBot:
@@ -46,7 +46,7 @@ class BronzeBot:
     # TODO: refactor for efficiency
     def radar(self, unit, dis=2):
         """
-        Radar Scaning for ship & shipyard.
+        Radar Scanning for ship & shipyard.
         Gather information of [ally, enemy, halite, free halite].
         Note: free halite here is estimated gain given number of turns in free area.
         Args:
@@ -102,7 +102,7 @@ class BronzeBot:
         Navigate ship to destination, give out optimal action for current turn.
         Args:
             ship: Ship
-            dest: Point, detination position
+            dest: Point, destination position
         """
         raise NotImplementedError
 
