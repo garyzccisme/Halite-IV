@@ -1,5 +1,4 @@
 from kaggle_environments.envs.halite.helpers import *
-import numpy as np
 
 
 ###################
@@ -38,6 +37,6 @@ def estimate_gain(halite, dis, t, collect_rate=0.25, regen_rate=0.02):
 def unify_pos(pos, size):
     """
     Convert position into standard one.
-    Exmaple: Given size = 5, Point(-2, -7) -> Point(3, 3)
+    Example: Given size = 5, Point(-2, -7) -> Point(3, 3)
     """
     return pos % size
