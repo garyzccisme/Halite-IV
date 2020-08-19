@@ -1,9 +1,9 @@
 import random
 
-from kaggle_environments.envs.halite.helpers import *
 import numpy as np
 
 from helper import *
+from kaggle_helpers import *
 
 
 class BronzeBot:
