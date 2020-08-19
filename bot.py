@@ -111,8 +111,9 @@ class BronzeBot:
         Command function for DEPOSIT ship state.
         """
         shipyard_pos = np.array(np.where(self.unit_map >= 2)).T
-        nearest_shipyard_pos = shipyard_pos[np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))]
-        self.navigate(ship, Point(tuple(nearest_shipyard_pos)))
+        nearest_shipyard_x, nearest_shipyard_y = shipyard_pos[
+            np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))]
+        self.navigate(ship, Point(nearest_shipyard_x, nearest_shipyard_y))
 
     def security_check(self, ship, dis=1):
         """

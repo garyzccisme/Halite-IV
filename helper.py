@@ -1,4 +1,4 @@
-from kaggle_environments.envs.halite.helpers import *
+from kaggle_helpers import Point
 
 
 ###################
