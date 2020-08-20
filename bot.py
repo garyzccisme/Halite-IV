@@ -111,6 +111,7 @@ class BronzeBot:
         Command function for DEPOSIT ship navigation.
         """
         shipyard_pos = np.array(np.where(self.unit_map >= 2)).T
+        # TODO: refactor with cal_dis(x, y)
         nearest_shipyard_x, nearest_shipyard_y = shipyard_pos[
             np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))
         ]
@@ -200,11 +201,27 @@ class BronzeBot:
                     self.ship_state[ship.id] = 'DEPOSIT'
                     self.course_reversal(ship)
 
-    def shipyard_command(self):
+    def spawn_command(self, max_ship=5):
         """
-        Command function for shipyard
+        Command function for shipyard to SPAWN ship.
+
+        Strategy: keep ship number in max_ship.
         """
-        raise NotImplementedError
+        if not self.me.ships or len(self.me.ships) < max_ship:
+            return
+
+    def convert_command(self):
+        """
+        Command function for ship to CONVERT to shipyard.
+
+        Strategy: if there's no shipyard, randomly select a ship with min cell halite to convert.
+        """
+        if not self.me.shipyards:
+            min_cell_halite = np.min([ship.cell.halite for ship in self.me.ships])
+            ship_candidate = [ship for ship in self.me.ships if ship.cell.halite == min_cell_halite]
+            convert_ship = random.choice(ship_candidate)
+            convert_ship.next_action = ShipAction.CONVERT
+            self.ship_state[convert_ship.id] = 'CONVERT'
 
     def play(self):
         """
