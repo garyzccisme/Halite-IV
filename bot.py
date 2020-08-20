@@ -97,22 +97,23 @@ class BronzeBot:
             'enemy_shipyard': enemy_shipyard,
         }
 
-    def navigate(self, ship, dest):
+    def navigate(self, ship, des):
         """
         Navigate ship to destination, give out optimal action for current turn.
         Args:
             ship: Ship
-            dest: Point, destination position
+            des: Point, destination position
         """
         raise NotImplementedError
 
     def course_reversal(self, ship):
         """
-        Command function for DEPOSIT ship state.
+        Command function for DEPOSIT ship navigation.
         """
         shipyard_pos = np.array(np.where(self.unit_map >= 2)).T
         nearest_shipyard_x, nearest_shipyard_y = shipyard_pos[
-            np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))]
+            np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))
+        ]
         self.navigate(ship, Point(nearest_shipyard_x, nearest_shipyard_y))
 
     def security_check(self, ship, dis=1):
@@ -127,10 +128,10 @@ class BronzeBot:
 
     def explore_command(self, ship, radar):
         """
-        Command function for EXPLORE
+        Command function for EXPLORE.
 
-        Strategy 1: if ship state is EXPLORE, navigate to the position with max free halite
-        Strategy 2: if ship is in the max free halite position, turn EXPLORE to COLLECT
+        Strategy 1: if ship state is EXPLORE, navigate to the position with max free halite.
+        Strategy 2: if ship is in the max free halite position, turn EXPLORE to COLLECT.
         """
         max_free_halite = np.max(list(radar['free_halite'].values()))
 
@@ -144,13 +145,13 @@ class BronzeBot:
                 self.command(ship, radar['dis'] + 1)
             else:
                 candidate = []
-                for pos, free_halite in radar['free_halite']:
+                for pos, free_halite in radar['free_halite'].items():
                     if free_halite[-1] == max_free_halite:
                         candidate.append(pos)
 
                 # Randomly choose a destination from candidate
                 des = random.choice(candidate)
-                self.navigate(ship, Point(des))
+                self.navigate(ship, des)
 
     def command(self, ship, radar_dis=2, deposit_halite=500, security_dis=1):
         """
@@ -198,6 +199,12 @@ class BronzeBot:
                 else:
                     self.ship_state[ship.id] = 'DEPOSIT'
                     self.course_reversal(ship)
+
+    def shipyard_command(self):
+        """
+        Command function for shipyard
+        """
+        raise NotImplementedError
 
     def play(self):
         """
