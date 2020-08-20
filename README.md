@@ -29,3 +29,16 @@ Halite Game Competition by Two Sigma
 - The `Board` doesn't have edge. If a ship is in the side or corner, next position can be in the opposite side, e.g. in a `5 * 5` size `Board`, `ship.position = (1, 0), ship.next_action = ShipAction.South` then `ship.position = (1, 4)` in next turn.
 
 # Game Strategy
+## Bronze Bot
+- Ship Strategy:
+    - `EXPLORE`: The only mission is to get to the `max halite position`. `ship.next_action` is chosen from
+     `[ShipAction.NORTH, ShipAction.SOUTH, ShipAction.EAST, ShipAction.WEST]`. Once ship arrives, turn ship state to
+     `COLLECT`. 
+    - `COLLECT`: `ship.next_action = None` until `ship.halite` reaches threshold value or detect enemy ships nearby.
+    - `DEPOSIT`: Navigate ship to nearest `shipyard`. If `ship.halite < threshold` and confirm safety, then turn ship
+     state to `EXPLORE`.
+- Shipyard Strategy:
+    - `CONVERT`:
+    - `SPAWN`:
+ 
+![alt text](https://app.lucidchart.com/publicSegments/view/4d9c59d5-1f32-4c9e-9afc-5ae6efff226e/image.png)
