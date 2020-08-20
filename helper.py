@@ -14,6 +14,7 @@ def index_to_position(index: int, size: int):
     return Point(x, (size - y - 1))
 
 
+# TODO: refactor for vectorized calculation
 def cal_dis(x, y):
     """
     Calculate Manhattan Distance for two points
