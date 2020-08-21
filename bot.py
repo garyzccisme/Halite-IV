@@ -209,7 +209,7 @@ class BronzeBot:
         Args:
             max_ship: The upper limit of ships.
         """
-        empty_shipyard = [shipyard for shipyard in self.me.shipyards]
+        empty_shipyard = [shipyard for shipyard in self.me.shipyards if not shipyard.cell.ship]
         while len(self.me.ships) < max_ship and len(empty_shipyard) > 0:
             shipyard = empty_shipyard.pop(0)
             shipyard.next_action = ShipyardAction.SPAWN
