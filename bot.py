@@ -206,15 +206,19 @@ class BronzeBot:
         Command function for shipyard to SPAWN ship.
 
         Strategy: keep ship number in max_ship.
+        Args:
+            max_ship: The upper limit of ships.
         """
-        if not self.me.ships or len(self.me.ships) < max_ship:
-            return
+        empty_shipyard = [shipyard for shipyard in self.me.shipyards]
+        while len(self.me.ships) < max_ship and len(empty_shipyard) > 0:
+            shipyard = empty_shipyard.pop(0)
+            shipyard.next_action = ShipyardAction.SPAWN
 
     def convert_command(self):
         """
         Command function for ship to CONVERT to shipyard.
 
-        Strategy: if there's no shipyard, randomly select a ship with min cell halite to convert.
+        Strategy: if there's no shipyard, randomly pick a ship with min cell halite to convert.
         """
         if not self.me.shipyards:
             min_cell_halite = np.min([ship.cell.halite for ship in self.me.ships])
