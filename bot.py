@@ -232,4 +232,5 @@ class BronzeBot:
         Main Function
         """
         self.update_map()
+
         raise NotImplementedError
