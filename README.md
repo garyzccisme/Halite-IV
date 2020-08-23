@@ -7,6 +7,7 @@ Halite Game Competition by Two Sigma
 - [Halite Template Notebook](https://www.kaggle.com/mylesoneill/halite-template-bot)
 - [Halite SDK Overview](https://www.kaggle.com/sam/halite-sdk-overview)
 - [full source code for the SDK](https://github.com/Kaggle/kaggle-environments/blob/master/kaggle_environments/envs/halite/helpers.py)
+- [Reinforcement Learning Tutorial](https://mofanpy.com/tutorials/machine-learning/reinforcement-learning/)
 
 # Game Overview 
 ## Element
