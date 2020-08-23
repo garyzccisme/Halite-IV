@@ -8,6 +8,7 @@ Halite Game Competition by Two Sigma
 - [Halite SDK Overview](https://www.kaggle.com/sam/halite-sdk-overview)
 - [full source code for the SDK](https://github.com/Kaggle/kaggle-environments/blob/master/kaggle_environments/envs/halite/helpers.py)
 - [Reinforcement Learning Tutorial](https://mofanpy.com/tutorials/machine-learning/reinforcement-learning/)
+- [Pytorch Documentation](http://pytorch123.com/SeventhSection/ReinforcementLearning/)
 
 # Game Overview 
 ## Element
