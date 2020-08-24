@@ -44,7 +44,7 @@ class BronzeBot:
                     self.unit_map[index_to_position(index, self.size)] += -1
 
     # TODO: refactor for efficiency
-    def radar(self, unit, dis=2):
+    def radar(self, unit: Ship, dis: int = 2):
         """
         Radar Scanning for ship & shipyard.
         Gather information of [ally, enemy, halite, free halite].
@@ -97,16 +97,16 @@ class BronzeBot:
             'enemy_shipyard': enemy_shipyard,
         }
 
-    def navigate(self, ship, des):
+    def navigate(self, ship: Ship, des: Point):
         """
         Navigate ship to destination, give out optimal action for current turn.
         Args:
-            ship: Ship
-            des: Point, destination position
+            ship: Ship.
+            des: destination position.
         """
         raise NotImplementedError
 
-    def course_reversal(self, ship):
+    def course_reversal(self, ship: Ship):
         """
         Command function for DEPOSIT ship navigation.
         """
@@ -117,7 +117,7 @@ class BronzeBot:
         ]
         self.navigate(ship, Point(nearest_shipyard_x, nearest_shipyard_y))
 
-    def security_check(self, ship, dis=1):
+    def security_check(self, ship: Ship, dis: int = 1) -> bool:
         """
         Check if ship is clear in given distance.
         """
@@ -127,7 +127,7 @@ class BronzeBot:
                 return False
         return True
 
-    def explore_command(self, ship, radar):
+    def explore_command(self, ship: Ship, radar: dict):
         """
         Command function for EXPLORE.
 
@@ -154,12 +154,18 @@ class BronzeBot:
                 des = random.choice(candidate)
                 self.navigate(ship, des)
 
-    def command(self, ship, radar_dis=2, deposit_halite=500, security_dis=1):
+    def command(self, ship: Ship, radar_dis: int = 2, deposit_halite: int = 500, security_dis: int = 1):
         """
         For each turn, update action of each ship.
+
+        Args:
+            ship: Ship
+            radar_dis: The radar scan distance of ship.
+            deposit_halite: The threshold halite value for ship to hold.
+            security_dis: The distance for security check.
         """
         # Before giving action, do radar first
-        self.radar(ship.position, radar_dis)
+        self.radar(ship, radar_dis)
         radar = self.unit_radar[ship.id]
 
         # DEPOSIT
@@ -201,7 +207,7 @@ class BronzeBot:
                     self.ship_state[ship.id] = 'DEPOSIT'
                     self.course_reversal(ship)
 
-    def spawn_command(self, max_ship=5):
+    def spawn_command(self, max_ship: int = 5):
         """
         Command function for shipyard to SPAWN ship.
 
@@ -210,9 +216,11 @@ class BronzeBot:
             max_ship: The upper limit of ships.
         """
         empty_shipyard = [shipyard for shipyard in self.me.shipyards if not shipyard.cell.ship]
-        while len(self.me.ships) < max_ship and len(empty_shipyard) > 0:
+        new_ship = 0
+        while len(self.me.ships) + new_ship < max_ship and len(empty_shipyard) > 0:
             shipyard = empty_shipyard.pop(0)
             shipyard.next_action = ShipyardAction.SPAWN
+            new_ship += 1
 
     def convert_command(self):
         """
@@ -227,10 +235,15 @@ class BronzeBot:
             convert_ship.next_action = ShipAction.CONVERT
             self.ship_state[convert_ship.id] = 'CONVERT'
 
-    def play(self):
+    def play(self, radar_dis=2, deposit_halite=500, security_dis=1, max_ship=5):
         """
         Main Function
         """
         self.update_map()
 
-        raise NotImplementedError
+        self.convert_command()
+        for ship in self.me.ships:
+            self.command(ship, radar_dis, deposit_halite, security_dis)
+        self.spawn_command(max_ship)
+
+        return self.me.next_actions
