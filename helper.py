@@ -40,5 +40,4 @@ def unify_pos(pos, size):
     Convert position into standard one.
     Example: Given size = 5, Point(-2, -7) -> Point(3, 3)
     """
-
     return pos % size
