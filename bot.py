@@ -15,6 +15,13 @@ class BronzeBot:
         self.size = config.size
         self.me = self.board.current_player
 
+        self.SHIP_ACTION_DICT = {
+            (1, 0): ShipAction.EAST,
+            (-1, 0): ShipAction.WEST,
+            (0, 1): ShipAction.NORTH,
+            (0, -1): ShipAction.SOUTH
+        }
+
         self.halite_map = None
         self.unit_map = None
 
@@ -104,7 +111,22 @@ class BronzeBot:
             ship: Ship.
             des: destination position.
         """
-        raise NotImplementedError
+        candidate_action = []
+        # There are actually 4 different paths, here we just choose the direct one
+        move_x, move_y = unify_pos(des, self.size) - ship.position
+
+        # Check direction availability & Add candidate action
+        next_move = [np.sign(move_x, 0), np.sign(0, move_y)]
+        for move in next_move:
+            next_pos = ship.position + move
+            if self.board[next_pos].ship or self.board[next_pos].shipyard:
+                break
+            if self.security_check(ship, dis=1, pos=next_pos):
+                candidate_action.append(self.SHIP_ACTION_DICT[move])
+
+        # Randomly choose an action
+        if candidate_action:
+            ship.next_action = random.choice([candidate_action])
 
     def course_reversal(self, ship: Ship):
         """
@@ -117,13 +139,16 @@ class BronzeBot:
         ]
         self.navigate(ship, Point(nearest_shipyard_x, nearest_shipyard_y))
 
-    def security_check(self, ship: Ship, dis: int = 1) -> bool:
+    def security_check(self, ship: Ship, dis: int = 1, pos: Point = None) -> bool:
         """
         Check if ship is clear in given distance.
         """
         radar = self.unit_radar[ship.id]
+        if not pos:
+            pos = ship.position
         for enemy_pos in radar['enemy_ship']:
-            if cal_dis(ship.position, enemy_pos) <= dis:
+            enemy_ship = self.board[enemy_pos]
+            if cal_dis(pos, enemy_pos) <= dis and ship.halite >= enemy_ship.halite:
                 return False
         return True
 
