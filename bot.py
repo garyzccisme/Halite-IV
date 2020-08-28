@@ -164,6 +164,8 @@ class BronzeBot:
             elif case_5 or case_6:
                 return 'DETOUR'
 
+        raise AssertionError('Unconsidered case')
+
     def course_reversal(self, ship: Ship):
         """
         Command function for DEPOSIT ship navigation.
