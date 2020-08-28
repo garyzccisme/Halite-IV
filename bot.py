@@ -114,23 +114,55 @@ class BronzeBot:
         candidate_action = []
         # There are actually 4 different paths, here we just choose the direct one
         move_x, move_y = unify_pos(des, self.size) - ship.position
-
-        # Check direction availability & Add candidate action
-        next_move = [(np.sign(move_x), 0), (0, np.sign(move_y))]
-        for move in next_move:
+        best_direction = {(np.sign(move_x), 0), (0, np.sign(move_y))}
+        # 1. can move to next_pos
+        for move in best_direction:
             next_pos = ship.position + move
-            next_cell = self.board[next_pos]
-
-            condition_1 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite > ship.halite
-            condition_2 = next_cell.shipyard and next_cell.shipyard.player != self.me
-            condition_3 = self.security_check(ship, dis=1, pos=next_pos)
-
-            if (condition_1 or condition_2) and condition_3:
+            if self.check_access(ship, next_pos):
                 candidate_action.append(self.SHIP_ACTION_DICT[move])
 
         # Randomly choose an action
         if candidate_action:
             ship.next_action = random.choice(candidate_action)
+        # 2. can't move to next_pos but can wait
+        # 3. can't move to next_pos but can bypass
+        # 4. can't move to next_pos and must run away
+
+    def check_access(self, ship, next_pos) -> str:
+        """
+        Check if ship can move to next_pos.
+
+        Args:
+            ship: Ship
+            next_pos: Point
+
+        Returns: True if next_pos is accessible.
+        """
+        next_cell = self.board[next_pos]
+        safe_condition = self.find_close_enemy(ship, dis=1, pos=next_pos) == []
+
+        # 1. next_cell is empty
+        # 2. next_cell is occupied by enemy ship with high halite
+        # 3. next_cell is occupied by ally empty shipyard
+        case_1 = not (next_cell.ship or next_cell.shipyard)
+        case_2 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite > ship.halite
+        case_3 = next_cell.shipyard and next_cell.shipyard.player == self.me and not next_cell.ship
+        unit_condition = case_1 or case_2 or case_3
+
+        # 4. next_cell is occupied by ally ship
+        # 5. next_cell is occupied by enemy ship with low halite
+        # 6. next_cell is occupied by enemy shipyard
+        case_4 = next_cell.ship and next_cell.ship.player == self.me
+        case_5 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite <= ship.halite
+        case_6 = next_cell.shipyard and next_cell.shipyard.player != self.me
+
+        if safe_condition and unit_condition:
+            return 'MOVE'
+        else:
+            if not safe_condition or case_4:
+                return 'WAIT'
+            elif case_5 or case_6:
+                return 'DETOUR'
 
     def course_reversal(self, ship: Ship):
         """
@@ -143,9 +175,9 @@ class BronzeBot:
         ]
         self.navigate(ship, Point(nearest_shipyard_x, nearest_shipyard_y))
 
-    def security_check(self, ship: Ship, dis: int = 1, pos: Point = None) -> list:
+    def find_close_enemy(self, ship: Ship, dis: int = 1, pos: Point = None) -> list:
         """
-        Check if ship is clear in given distance.
+        Find dangerous enemy ship in given distance.
         Args:
             ship: Ship
             dis: Int, Default = 1. The distance of security_check.
@@ -159,7 +191,7 @@ class BronzeBot:
             pos = ship.position
         for enemy_pos in radar['enemy_ship']:
             enemy_ship = self.board[enemy_pos]
-            if cal_dis(pos, enemy_pos) <= dis and ship.halite >= enemy_ship.halite:
+            if 0 < cal_dis(pos, enemy_pos) <= dis and ship.halite >= enemy_ship.halite:
                 close_enemy.append(enemy_pos)
         return close_enemy
 
@@ -222,7 +254,7 @@ class BronzeBot:
             if ship.halite >= deposit_halite:
                 self.course_reversal(ship)
             else:
-                if not self.security_check(ship, security_dis):
+                if not self.find_close_enemy(ship, security_dis):
                     self.ship_state[ship.id] = 'EXPLORE'
                     self.ship_command(ship, radar_dis, deposit_halite, security_dis)
                 else:
@@ -241,7 +273,7 @@ class BronzeBot:
                 self.ship_state[ship.id] = 'DEPOSIT'
                 self.ship_command(ship, radar_dis, deposit_halite, security_dis)
             else:
-                if not self.security_check(ship, security_dis):
+                if not self.find_close_enemy(ship, security_dis):
                     self.explore_command(ship, radar)
                 else:
                     self.ship_state[ship.id] = 'DEPOSIT'
