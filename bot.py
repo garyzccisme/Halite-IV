@@ -183,12 +183,12 @@ class BronzeBot:
         """
         Command function for DEPOSIT ship navigation.
         """
-        shipyard_pos = np.array(np.where(self.unit_map >= 2)).T
-        # TODO: refactor with cal_dis(x, y)
-        nearest_shipyard_x, nearest_shipyard_y = shipyard_pos[
-            np.argmin(np.abs(shipyard_pos - ship.position).sum(axis=1))
-        ]
-        self.navigate(ship, Point(nearest_shipyard_x, nearest_shipyard_y))
+        # Make sure there's at least one shipyard
+        self.convert_command()
+
+        # Find nearest shipyard
+        nearest_shipyard = min(self.me.shipyards, key=lambda x: cal_dis(ship.position, x.position))
+        self.navigate(ship, nearest_shipyard.position)
 
     def find_close_enemy(self, ship: Ship, dis: int = 1, pos: Point = None) -> list:
         """
@@ -210,7 +210,7 @@ class BronzeBot:
                 close_enemy.append(enemy_pos)
         return close_enemy
 
-    def explore_command(self, ship: Ship, radar: dict):
+    def explore_command(self, ship: Ship, radar: dict, deposit_halite: int = 500, security_dis: int = 1):
         """
         Command function for EXPLORE.
 
@@ -226,7 +226,7 @@ class BronzeBot:
         else:
             # If there's no halite, expand radar distance
             if max_free_halite == 0:
-                self.ship_command(ship, radar['dis'] + 1)
+                self.ship_command(ship, radar['dis'] + 1, deposit_halite, security_dis)
             else:
                 candidate = []
                 for pos, free_halite in radar['free_halite'].items():
@@ -265,20 +265,24 @@ class BronzeBot:
             if ship.cell.shipyard and ship.halite == 0:
                 self.ship_state[ship.id] = 'EXPLORE'
                 self.ship_command(ship, radar_dis, deposit_halite, security_dis)
-
-            if ship.halite >= deposit_halite:
-                self.course_reversal(ship)
             else:
-                if not self.find_close_enemy(ship, security_dis):
-                    self.ship_state[ship.id] = 'EXPLORE'
-                    self.ship_command(ship, radar_dis, deposit_halite, security_dis)
-                else:
-                    # Enemy is close, stick to DEPOSIT ship state.
+                if ship.halite >= deposit_halite:
                     self.course_reversal(ship)
+                else:
+                    if not self.find_close_enemy(ship, security_dis):
+                        self.ship_state[ship.id] = 'EXPLORE'
+                        self.ship_command(ship, radar_dis, deposit_halite, security_dis)
+                    else:
+                        # Enemy is close, stick to DEPOSIT ship state.
+                        self.course_reversal(ship)
 
         # EXPLORE
         elif self.ship_state[ship.id] == 'EXPLORE':
-            self.explore_command(ship, radar)
+            if ship.halite >= deposit_halite:
+                self.ship_state[ship.id] = 'DEPOSIT'
+                self.ship_command(ship, radar_dis, deposit_halite, security_dis)
+            else:
+                self.explore_command(ship, radar, deposit_halite, security_dis)
 
         # COLLECT
         # Strategy 1: if ship halite reaches deposit_halite, turn COLLECT to DEPOSIT
@@ -289,7 +293,7 @@ class BronzeBot:
                 self.ship_command(ship, radar_dis, deposit_halite, security_dis)
             else:
                 if not self.find_close_enemy(ship, security_dis):
-                    self.explore_command(ship, radar)
+                    self.explore_command(ship, radar, deposit_halite, security_dis)
                 else:
                     self.ship_state[ship.id] = 'DEPOSIT'
                     self.course_reversal(ship)
@@ -326,7 +330,7 @@ class BronzeBot:
         """
         Main Function
         """
-        print('MY TURN')
+        print('MY TURN {}'.format(self.board.observation['step']))
         self.update_map()
 
         print('- update map')
@@ -338,6 +342,7 @@ class BronzeBot:
             self.ship_command(ship, radar_dis, deposit_halite, security_dis)
             print('---- ship state: {}'.format(self.ship_state[ship.id]))
             print('---- ship action: {}'.format(ship.next_action))
+            print('---- ship halite: {}'.format(ship.halite))
 
         self.spawn_command(max_ship)
         print('- spawn command')
