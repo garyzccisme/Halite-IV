@@ -29,6 +29,7 @@ class BronzeBot:
         self.radar_params = {}
         self.ship_state = {}
 
+    # TODO: Legacy function
     def update_map(self):
         """
         In the beginning of each turn, update halite & unit map.
@@ -331,9 +332,9 @@ class BronzeBot:
         Main Function
         """
         print('MY TURN {}'.format(self.board.observation['step']))
-        self.update_map()
 
-        print('- update map')
+        # self.update_map()
+        # print('- update map')
 
         self.convert_command()
         print('- convert command ')
