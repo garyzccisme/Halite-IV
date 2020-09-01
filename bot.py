@@ -111,47 +111,60 @@ class BronzeBot:
             ship: Ship.
             des: destination position.
         """
-        candidate_action = []
+        # Check nearby position access
+        pos_access = {}
+        for move in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            pos_access[move] = self.check_access(ship, move)
+
         # There are actually 4 different paths, here we just choose the direct one
         move_x, move_y = unify_pos(des, self.size) - ship.position
-        best_direction = {(np.sign(move_x), 0), (0, np.sign(move_y))}
-        # 1. can move to next_pos
-        for move in best_direction:
-            next_pos = ship.position + move
-            if self.check_access(ship, next_pos):
-                candidate_action.append(self.SHIP_ACTION_DICT[move])
 
-        # Randomly choose an action
-        if candidate_action:
-            ship.next_action = random.choice(candidate_action)
-        # 2. can't move to next_pos but can wait
-        # 3. can't move to next_pos but can bypass
-        # 4. can't move to next_pos and must run away
+        candidate_move = []
+        dangerous_move = []
+        for move in [(np.sign(move_x), 0), (0, np.sign(move_y))]:
+            if move != (0, 0):
+                pos_access = self.check_access(ship, move)
+                if pos_access == 'MOVE':
+                    candidate_move.append(move)
+                elif pos_access == 'DETOUR':
+                    dangerous_move.append(move)
 
-    def check_access(self, ship, next_pos) -> str:
+        # Randomly choose an action in candidate_move
+        # If both candidate_move & dangerous_move are None, then the ship's order is WAIT
+        if candidate_move:
+            ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
+        elif dangerous_move:
+            for move in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                if move not in dangerous_move:
+                    if self.check_access(ship, move) == 'MOVE':
+                        candidate_move.append(move)
+            ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
+
+    def check_access(self, ship, move) -> str:
         """
         Check if ship can move to next_pos.
 
         Args:
             ship: Ship
-            next_pos: Point
+            move: Tuple
 
         Returns: True if next_pos is accessible.
         """
+        next_pos = ship.position + move
         next_cell = self.board[next_pos]
         safe_condition = self.find_close_enemy(ship, dis=1, pos=next_pos) == []
 
-        # 1. next_cell is empty
-        # 2. next_cell is occupied by enemy ship with high halite
-        # 3. next_cell is occupied by ally empty shipyard
+        # Case 1: next_cell is empty
+        # Case 2: next_cell is occupied by enemy ship with high halite
+        # Case 3: next_cell is occupied by ally empty shipyard
         case_1 = not (next_cell.ship or next_cell.shipyard)
         case_2 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite > ship.halite
         case_3 = next_cell.shipyard and next_cell.shipyard.player == self.me and not next_cell.ship
         unit_condition = case_1 or case_2 or case_3
 
-        # 4. next_cell is occupied by ally ship
-        # 5. next_cell is occupied by enemy ship with low halite
-        # 6. next_cell is occupied by enemy shipyard
+        # Case 4: next_cell is occupied by ally ship
+        # Case 5: next_cell is occupied by enemy ship with low halite
+        # Case 6: next_cell is occupied by enemy shipyard
         case_4 = next_cell.ship and next_cell.ship.player == self.me
         case_5 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite <= ship.halite
         case_6 = next_cell.shipyard and next_cell.shipyard.player != self.me
