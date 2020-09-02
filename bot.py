@@ -29,8 +29,7 @@ class BronzeBot:
         self.radar_params = {}
         self.ship_state = {}
 
-    # TODO: Legacy function
-    def update_map(self):
+    def get_map(self):
         """
         In the beginning of each turn, update halite & unit map.
         """
@@ -50,6 +49,27 @@ class BronzeBot:
                     self.unit_map[index_to_position(index, self.size)] += -2
                 for index, _ in ships.values():
                     self.unit_map[index_to_position(index, self.size)] += -1
+
+    def update_map(self, ship):
+        """
+        Update self.unit_map when a ship gets 'MOVE' order.
+        """
+        if ship.next_action in {ShipAction.NORTH, ShipAction.SOUTH, ShipAction.WEST, ShipAction.EAST}:
+            pos = ship.position
+            if ship.next_action == ShipAction.NORTH:
+                next_pos = unify_pos(pos + (0, 1), self.size)
+            elif ship.next_action == ShipAction.SOUTH:
+                next_pos = unify_pos(pos + (0, -1), self.size)
+            elif ship.next_action == ShipAction.WEST:
+                next_pos = unify_pos(pos + (1, 0), self.size)
+            else:
+                next_pos = unify_pos(pos + (-1, 0), self.size)
+
+            self.unit_map[pos] -= 1
+            if self.unit_map[next_pos] <= 0:
+                self.unit_map[next_pos] = 1
+            else:
+                self.unit_map[next_pos] += 1
 
     # TODO: refactor for efficiency
     def radar(self, unit: Ship, dis: int = 2):
@@ -141,6 +161,9 @@ class BronzeBot:
                         candidate_move.append(move)
             ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
 
+        # Finally update self.unit_map for MOVE ship
+        self.update_map(ship)
+
     def check_access(self, ship, move) -> str:
         """
         Check if ship can move to next_pos.
@@ -158,24 +181,26 @@ class BronzeBot:
         # Case 1: next_cell is empty
         # Case 2: next_cell is occupied by enemy ship with high halite
         # Case 3: next_cell is occupied by ally empty shipyard
+        # Case 4: next_cell won't be occupied by another ally ship next round
         case_1 = not (next_cell.ship or next_cell.shipyard)
         case_2 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite > ship.halite
         case_3 = next_cell.shipyard and next_cell.shipyard.player == self.me and not next_cell.ship
-        unit_condition = case_1 or case_2 or case_3
+        case_4 = self.unit_map[next_pos] != 1 or self.unit_map[next_pos] != 3
+        unit_condition = (case_1 or case_2 or case_3) and case_4
 
-        # Case 4: next_cell is occupied by ally ship
-        # Case 5: next_cell is occupied by enemy ship with low halite
-        # Case 6: next_cell is occupied by enemy shipyard
-        case_4 = next_cell.ship and next_cell.ship.player == self.me
-        case_5 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite <= ship.halite
-        case_6 = next_cell.shipyard and next_cell.shipyard.player != self.me
+        # Case 5: next_cell is occupied by ally ship
+        # Case 6: next_cell is occupied by enemy ship with low halite
+        # Case 7: next_cell is occupied by enemy shipyard
+        case_5 = next_cell.ship and next_cell.ship.player == self.me
+        case_6 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite <= ship.halite
+        case_7 = next_cell.shipyard and next_cell.shipyard.player != self.me
 
         if safe_condition and unit_condition:
             return 'MOVE'
         else:
-            if not safe_condition or case_4:
+            if not safe_condition or case_4 or case_5:
                 return 'WAIT'
-            elif case_5 or case_6:
+            elif case_6 or case_7:
                 return 'DETOUR'
 
         raise AssertionError('Unconsidered case')
@@ -333,8 +358,8 @@ class BronzeBot:
         """
         print('MY TURN {}'.format(self.board.observation['step']))
 
-        # self.update_map()
-        # print('- update map')
+        self.get_map()
+        print('- update map')
 
         self.convert_command()
         print('- convert command ')
