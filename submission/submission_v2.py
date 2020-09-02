@@ -377,22 +377,22 @@ class BronzeBot:
         """
         Main Function
         """
-        print('MY TURN {}'.format(self.board.observation['step']))
+        # print('MY TURN {}'.format(self.board.observation['step']))
         self.update_map()
 
-        print('- update map')
+        # print('- update map')
 
         self.convert_command()
-        print('- convert command ')
+        # print('- convert command ')
         for ship in self.me.ships:
-            print('-- command {}'.format(ship.id))
+            # print('-- command {}'.format(ship.id))
             self.ship_command(ship, radar_dis, deposit_halite, security_dis)
-            print('---- ship state: {}'.format(self.ship_state[ship.id]))
-            print('---- ship action: {}'.format(ship.next_action))
-            print('---- ship halite: {}'.format(ship.halite))
+            # print('---- ship state: {}'.format(self.ship_state[ship.id]))
+            # print('---- ship action: {}'.format(ship.next_action))
+            # print('---- ship halite: {}'.format(ship.halite))
 
         self.spawn_command(max_ship)
-        print('- spawn command')
+        # print('- spawn command')
 
         return self.me.next_actions
     
