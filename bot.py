@@ -137,6 +137,7 @@ class BronzeBot:
                         candidate_move.append(move)
             ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
 
+    # TODO: refactor cases
     def case_analysis(self, ship, move) -> str:
         """
         Check if ship can move to next_pos.
