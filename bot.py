@@ -106,6 +106,7 @@ class BronzeBot:
             'enemy_shipyard': enemy_shipyard,
         }
 
+    # TODO: Figure out self collision and endless waiting
     def navigate(self, ship: Ship, des: Point):
         """
         Navigate ship to destination, give out optimal action for current turn.
