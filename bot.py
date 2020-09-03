@@ -28,7 +28,9 @@ class BronzeBot:
         self.unit_radar = {}
         self.radar_params = {}
         self.ship_state = {}
+        self.ship_next_pos = set()
 
+    # TODO: legacy function
     def get_map(self):
         """
         In the beginning of each turn, update halite & unit map.
@@ -49,27 +51,6 @@ class BronzeBot:
                     self.unit_map[index_to_position(index, self.size)] += -2
                 for index, _ in ships.values():
                     self.unit_map[index_to_position(index, self.size)] += -1
-
-    def update_map(self, ship):
-        """
-        Update self.unit_map when a ship gets 'MOVE' order.
-        """
-        if ship.next_action in {ShipAction.NORTH, ShipAction.SOUTH, ShipAction.WEST, ShipAction.EAST}:
-            pos = ship.position
-            if ship.next_action == ShipAction.NORTH:
-                next_pos = unify_pos(pos + (0, 1), self.size)
-            elif ship.next_action == ShipAction.SOUTH:
-                next_pos = unify_pos(pos + (0, -1), self.size)
-            elif ship.next_action == ShipAction.WEST:
-                next_pos = unify_pos(pos + (1, 0), self.size)
-            else:
-                next_pos = unify_pos(pos + (-1, 0), self.size)
-
-            self.unit_map[pos] -= 1
-            if self.unit_map[next_pos] <= 0:
-                self.unit_map[next_pos] = 1
-            else:
-                self.unit_map[next_pos] += 1
 
     # TODO: refactor for efficiency
     def radar(self, unit: Ship, dis: int = 2):
@@ -132,11 +113,6 @@ class BronzeBot:
             ship: Ship.
             des: destination position.
         """
-        # Check nearby position access
-        pos_access = {}
-        for move in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-            pos_access[move] = self.check_access(ship, move)
-
         # There are actually 4 different paths, here we just choose the direct one
         move_x, move_y = unify_pos(des, self.size) - ship.position
 
@@ -144,7 +120,7 @@ class BronzeBot:
         dangerous_move = []
         for move in [(np.sign(move_x), 0), (0, np.sign(move_y))]:
             if move != (0, 0):
-                pos_access = self.check_access(ship, move)
+                pos_access = self.case_analysis(ship, move)
                 if pos_access == 'MOVE':
                     candidate_move.append(move)
                 elif pos_access == 'DETOUR':
@@ -157,14 +133,11 @@ class BronzeBot:
         elif dangerous_move:
             for move in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
                 if move not in dangerous_move:
-                    if self.check_access(ship, move) == 'MOVE':
+                    if self.case_analysis(ship, move) == 'MOVE':
                         candidate_move.append(move)
             ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
 
-        # Finally update self.unit_map for MOVE ship
-        self.update_map(ship)
-
-    def check_access(self, ship, move) -> str:
+    def case_analysis(self, ship, move) -> str:
         """
         Check if ship can move to next_pos.
 
@@ -174,46 +147,47 @@ class BronzeBot:
 
         Returns: True if next_pos is accessible.
         """
-        next_pos = ship.position + move
+        next_pos = unify_pos(ship.position + move, self.size)
         next_cell = self.board[next_pos]
+
+        # Check if there's any nearby enemy ship for next_pos
         safe_condition = self.find_close_enemy(ship, dis=1, pos=next_pos) == []
 
-        # Case 1: next_cell is empty
+        # Case 1: next_cell is empty or occupied by empty ally shipyard
         # Case 2: next_cell is occupied by enemy ship with high halite
-        # Case 3: next_cell is occupied by ally empty shipyard
-        # Case 4: next_cell won't be occupied by another ally ship next round
-        case_1 = not (next_cell.ship or next_cell.shipyard)
-        case_2 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite > ship.halite
-        case_3 = next_cell.shipyard and next_cell.shipyard.player == self.me and not next_cell.ship
-        case_4 = self.unit_map[next_pos] != 1 or self.unit_map[next_pos] != 3
-        unit_condition = (case_1 or case_2 or case_3) and case_4
+        # Case 3: next_cell won't be occupied by another ally ship next round
+        case_1 = next_cell.ship is None and (next_cell.shipyard is None or next_cell.shipyard.player == self.me)
+        case_2 = next_cell.ship is not None and next_cell.ship.player != self.me and next_cell.ship.halite > ship.halite
+        case_3 = next_cell.position not in self.ship_next_pos
+        move_condition = (case_1 or case_2) and case_3
 
-        # Case 5: next_cell is occupied by ally ship
-        # Case 6: next_cell is occupied by enemy ship with low halite
-        # Case 7: next_cell is occupied by enemy shipyard
-        case_5 = next_cell.ship and next_cell.ship.player == self.me
-        case_6 = next_cell.ship and next_cell.ship.player != self.me and next_cell.ship.halite <= ship.halite
-        case_7 = next_cell.shipyard and next_cell.shipyard.player != self.me
+        # Case 4: next_cell is occupied by ally ship
+        # Case 5: next_cell is occupied by enemy ship with low halite
+        # Case 6: next_cell is occupied by enemy shipyard
+        case_4 = next_cell.ship is not None and next_cell.ship.player == self.me
+        case_5 = next_cell.ship is not None and next_cell.ship.player != self.me and next_cell.ship.halite <= ship.halite
+        case_6 = next_cell.shipyard and next_cell.shipyard.player != self.me
 
-        if safe_condition and unit_condition:
+        if safe_condition and move_condition:
             return 'MOVE'
         else:
-            if not safe_condition or case_4 or case_5:
+            if not safe_condition or (not case_3) or case_4:
                 return 'WAIT'
-            elif case_6 or case_7:
+            elif case_5 or case_6:
                 return 'DETOUR'
 
+        print(safe_condition, case_1, case_2, case_3, case_4, case_5, case_6)
         raise AssertionError('Unconsidered case')
 
     def course_reversal(self, ship: Ship):
         """
         Command function for DEPOSIT ship navigation.
         """
-        # Make sure there's at least one shipyard
-        self.convert_command()
-
-        # Find nearest shipyard
-        nearest_shipyard = min(self.me.shipyards, key=lambda x: cal_dis(ship.position, x.position))
+        if self.me.shipyards:
+            nearest_shipyard = min(self.me.shipyards, key=lambda x: cal_dis(ship.position, x.position))
+        else:
+            shipyards = [ship.position for ship in self.me.ships if self.ship_state.get(ship.id) == 'CONVERT']
+            nearest_shipyard = min(shipyards, key=lambda x: cal_dis(ship.position, x.position))
         self.navigate(ship, nearest_shipyard.position)
 
     def find_close_enemy(self, ship: Ship, dis: int = 1, pos: Point = None) -> list:
@@ -336,8 +310,11 @@ class BronzeBot:
         new_ship = 0
         while len(self.me.ships) + new_ship < max_ship and len(empty_shipyard) > 0:
             shipyard = empty_shipyard.pop(0)
-            shipyard.next_action = ShipyardAction.SPAWN
-            new_ship += 1
+            if shipyard.position not in self.ship_next_pos:
+                shipyard.next_action = ShipyardAction.SPAWN
+                new_ship += 1
+                # Add new ship position into self.ship_next_pos
+                self.ship_next_pos.add(shipyard.position)
 
     def convert_command(self):
         """
@@ -352,22 +329,41 @@ class BronzeBot:
             convert_ship.next_action = ShipAction.CONVERT
             self.ship_state[convert_ship.id] = 'CONVERT'
 
+    def update_ship_pos(self, ship):
+        """
+        Update self.ship_next_pos for ship position in next round.
+        """
+        pos = ship.position
+        if ship.next_action in {ShipAction.NORTH, ShipAction.SOUTH, ShipAction.WEST, ShipAction.EAST}:
+            if ship.next_action == ShipAction.NORTH:
+                next_pos = unify_pos(pos + (0, 1), self.size)
+            elif ship.next_action == ShipAction.SOUTH:
+                next_pos = unify_pos(pos + (0, -1), self.size)
+            elif ship.next_action == ShipAction.WEST:
+                next_pos = unify_pos(pos + (1, 0), self.size)
+            else:
+                next_pos = unify_pos(pos + (-1, 0), self.size)
+            self.ship_next_pos.add(next_pos)
+        elif ship.next_action is None:
+            self.ship_next_pos.add(pos)
+
     def play(self, radar_dis=2, deposit_halite=500, security_dis=1, max_ship=5):
         """
         Main Function
         """
         print('MY TURN {}'.format(self.board.observation['step']))
 
-        self.get_map()
-        print('- update map')
+        # Reset self.ship_next_pos
+        self.ship_next_pos = set()
 
         self.convert_command()
         print('- convert command ')
         for ship in self.me.ships:
             print('-- command {}'.format(ship.id))
             self.ship_command(ship, radar_dis, deposit_halite, security_dis)
+            self.update_ship_pos(ship)
             print('---- ship state: {}'.format(self.ship_state[ship.id]))
-            print('---- ship action: {}'.format(ship.next_action))
+            print('---- ship next action: {}'.format(ship.next_action))
             print('---- ship halite: {}'.format(ship.halite))
 
         self.spawn_command(max_ship)
