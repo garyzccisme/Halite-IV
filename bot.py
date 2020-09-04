@@ -19,7 +19,8 @@ class BronzeBot:
             (1, 0): ShipAction.EAST,
             (-1, 0): ShipAction.WEST,
             (0, 1): ShipAction.NORTH,
-            (0, -1): ShipAction.SOUTH
+            (0, -1): ShipAction.SOUTH,
+            (0, 0): None,
         }
 
         self.halite_map = None
@@ -152,34 +153,35 @@ class BronzeBot:
         next_pos = unify_pos(ship.position + move, self.size)
         next_cell = self.board[next_pos]
 
+        # Basic condition
+        # Check next_pos current occupation condition
+        cell_condition_1 = next_cell.ship is not None
+        cell_condition_2 = next_cell.shipyard is not None
+
+        # DETOUR
+        detour_case_1 = cell_condition_1 and next_cell.ship.player != self.me and next_cell.ship.halite <= ship.halite
+        detour_case_2 = cell_condition_2 and next_cell.shipyard.player != self.me
+        detour_condition = detour_case_1 or detour_case_2
+
+        # MOVE
         # Check if there's any nearby enemy ship for next_pos
         safe_condition = self.find_close_enemy(ship, dis=1, pos=next_pos) == []
+        # Check if next_pos is accessible next round
+        next_condition = next_cell.position not in self.ship_next_pos
+        # Move cases
+        move_case_1 = not cell_condition_1 and not cell_condition_2
+        move_case_2 = cell_condition_1 and not cell_condition_2 and next_cell.ship.player != self.me and next_cell.ship.halite > ship.halite
+        move_case_3 = not cell_condition_1 and cell_condition_2 and next_cell.shipyard.player == self.me
+        move_case_4 = cell_condition_1 and next_cell.ship.next_action is not None
+        move_cases = (move_case_1 or move_case_2 or move_case_3 or move_case_4)
+        move_condition = move_cases and safe_condition and next_condition
 
-        # Case 1: next_cell is empty or occupied by empty ally shipyard
-        # Case 2: next_cell is occupied by enemy ship with high halite
-        # Case 3: next_cell won't be occupied by another ally ship next round
-        case_1 = next_cell.ship is None and (next_cell.shipyard is None or next_cell.shipyard.player == self.me)
-        case_2 = next_cell.ship is not None and next_cell.ship.player != self.me and next_cell.ship.halite > ship.halite
-        case_3 = next_cell.position not in self.ship_next_pos
-        move_condition = (case_1 or case_2) and case_3
-
-        # Case 4: next_cell is occupied by ally ship
-        # Case 5: next_cell is occupied by enemy ship with low halite
-        # Case 6: next_cell is occupied by enemy shipyard
-        case_4 = next_cell.ship is not None and next_cell.ship.player == self.me
-        case_5 = next_cell.ship is not None and next_cell.ship.player != self.me and next_cell.ship.halite <= ship.halite
-        case_6 = next_cell.shipyard and next_cell.shipyard.player != self.me
-
-        if safe_condition and move_condition:
+        if detour_condition:
+            return 'DETOUR'
+        elif move_condition:
             return 'MOVE'
         else:
-            if not safe_condition or (not case_3) or case_4:
-                return 'WAIT'
-            elif case_5 or case_6:
-                return 'DETOUR'
-
-        print(safe_condition, case_1, case_2, case_3, case_4, case_5, case_6)
-        raise AssertionError('Unconsidered case')
+            return 'WAIT'
 
     def course_reversal(self, ship: Ship):
         """
@@ -310,7 +312,7 @@ class BronzeBot:
         """
         empty_shipyard = [shipyard for shipyard in self.me.shipyards if not shipyard.cell.ship]
         new_ship = 0
-        while len(self.me.ships) + new_ship < max_ship and len(empty_shipyard) > 0:
+        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_ship:
             shipyard = empty_shipyard.pop(0)
             if shipyard.position not in self.ship_next_pos:
                 shipyard.next_action = ShipyardAction.SPAWN
@@ -331,23 +333,23 @@ class BronzeBot:
             convert_ship.next_action = ShipAction.CONVERT
             self.ship_state[convert_ship.id] = 'CONVERT'
 
-    def update_ship_pos(self, ship):
+    def update_ship_next_pos(self, ship):
         """
         Update self.ship_next_pos for ship position in next round.
         """
         pos = ship.position
-        if ship.next_action in {ShipAction.NORTH, ShipAction.SOUTH, ShipAction.WEST, ShipAction.EAST}:
+        if ship.next_action is None:
+            self.ship_next_pos.add(pos)
+        elif ship.next_action != ShipAction.CONVERT:
             if ship.next_action == ShipAction.NORTH:
                 next_pos = unify_pos(pos + (0, 1), self.size)
             elif ship.next_action == ShipAction.SOUTH:
                 next_pos = unify_pos(pos + (0, -1), self.size)
             elif ship.next_action == ShipAction.WEST:
-                next_pos = unify_pos(pos + (1, 0), self.size)
-            else:
                 next_pos = unify_pos(pos + (-1, 0), self.size)
+            else:
+                next_pos = unify_pos(pos + (1, 0), self.size)
             self.ship_next_pos.add(next_pos)
-        elif ship.next_action is None:
-            self.ship_next_pos.add(pos)
 
     def play(self, radar_dis=2, deposit_halite=500, security_dis=1, max_ship=5):
         """
@@ -358,17 +360,18 @@ class BronzeBot:
         # Reset self.ship_next_pos
         self.ship_next_pos = set()
 
+        print('- spawn command')
+        self.spawn_command(max_ship)
+
+        print('- convert command')
         self.convert_command()
-        print('- convert command ')
+
         for ship in self.me.ships:
             print('-- command {}'.format(ship.id))
             self.ship_command(ship, radar_dis, deposit_halite, security_dis)
-            self.update_ship_pos(ship)
+            self.update_ship_next_pos(ship)
             print('---- ship state: {}'.format(self.ship_state[ship.id]))
             print('---- ship next action: {}'.format(ship.next_action))
             print('---- ship halite: {}'.format(ship.halite))
-
-        self.spawn_command(max_ship)
-        print('- spawn command')
 
         return self.me.next_actions
