@@ -107,7 +107,7 @@ class BronzeBot:
             'enemy_shipyard': enemy_shipyard,
         }
 
-    # TODO: Figure out self collision and endless waiting
+    # TODO: Figure out endless waiting
     def navigate(self, ship: Ship, des: Point):
         """
         Navigate ship to destination, give out optimal action for current turn.
@@ -139,7 +139,6 @@ class BronzeBot:
                         candidate_move.append(move)
             ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
 
-    # TODO: refactor cases
     def case_analysis(self, ship, move) -> str:
         """
         Check if ship can move to next_pos.
