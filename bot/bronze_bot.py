@@ -2,13 +2,15 @@ import random
 
 import numpy as np
 
+from bot.base import Bot
 from helper import *
 from kaggle_helpers import *
 
 
-class BronzeBot:
+class BronzeBot(Bot):
 
     def __init__(self, obs, config):
+        super().__init__(obs, config)
         self.obs = obs
         self.config = config
         self.board = Board(obs, config)
