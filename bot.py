@@ -207,7 +207,7 @@ class BronzeBot:
         if self.me.shipyards:
             nearest_shipyard = min(self.me.shipyards, key=lambda x: cal_dis(ship.position, x.position))
         else:
-            shipyards = [ship.position for ship in self.me.ships if self.ship_state.get(ship.id) == 'CONVERT']
+            shipyards = [ship for ship in self.me.ships if self.ship_state.get(ship.id) == 'CONVERT']
             nearest_shipyard = min(shipyards, key=lambda x: cal_dis(ship.position, x.position))
         self.navigate(ship, nearest_shipyard.position)
 
