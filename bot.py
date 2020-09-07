@@ -357,7 +357,7 @@ class BronzeBot:
         pos = ship.position
         if ship.next_action is None:
             self.ship_next_pos.add(pos)
-            self.ship_wait_log[ship.id] = self.ship_wait_log.setdefault(ship.id, 0) + 1
+            self.ship_wait_log[ship.id] = self.ship_wait_log.get(ship.id, 0) + 1
         else:
             self.ship_wait_log[ship.id] = 0
             if ship.next_action != ShipAction.CONVERT:
