@@ -331,7 +331,11 @@ class BronzeBot:
         """
         empty_shipyard = [shipyard for shipyard in self.me.shipyards if not shipyard.cell.ship]
         new_ship = 0
-        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_ship and self.me.halite >= 500:
+        # Spawn Condition:
+        # 1. There are available empty shipyards.
+        # 2. Current and next turn ship number is lower than max_ship.
+        # 3. Player's halite is more than Spawn Cost.
+        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_ship and self.me.halite > self.config['spawnCost']:
             shipyard = empty_shipyard.pop(0)
             if shipyard.position not in self.ship_next_pos:
                 shipyard.next_action = ShipyardAction.SPAWN
@@ -374,19 +378,19 @@ class BronzeBot:
         """
         Main Function
         """
-        print('MY TURN {}'.format(self.board.observation['step']))
-        print('- spawn command')
+        # print('MY TURN {}'.format(self.board.observation['step']))
+        # print('- spawn command')
         self.spawn_command(max_ship)
 
-        print('- convert command')
+        # print('- convert command')
         self.convert_command()
 
         for ship in self.me.ships:
-            print('-- command {}'.format(ship.id))
+            # print('-- command {}'.format(ship.id))
             self.ship_command(ship, radar_dis, deposit_halite, security_dis)
             self.update_ship_next_pos(ship)
-            print('---- ship state: {}'.format(self.ship_state[ship.id]))
-            print('---- ship next action: {}'.format(ship.next_action))
-            print('---- ship halite: {}'.format(ship.halite))
+            # print('---- ship state: {}'.format(self.ship_state[ship.id]))
+            # print('---- ship next action: {}'.format(ship.next_action))
+            # print('---- ship halite: {}'.format(ship.halite))
 
         return self.me.next_actions
