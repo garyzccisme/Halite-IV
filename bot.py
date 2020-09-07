@@ -156,7 +156,8 @@ class BronzeBot:
             candidate_move += [(0, 0)] * len(candidate_move)
         elif wait_prob != 0:
             raise ValueError('Invalid wait_prob value, only 0 or 0.5 is allowed.')
-        ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
+        if candidate_move:
+            ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
 
     def case_analysis(self, ship, move) -> str:
         """
@@ -330,7 +331,7 @@ class BronzeBot:
         """
         empty_shipyard = [shipyard for shipyard in self.me.shipyards if not shipyard.cell.ship]
         new_ship = 0
-        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_ship:
+        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_ship and self.me.halite >= 500:
             shipyard = empty_shipyard.pop(0)
             if shipyard.position not in self.ship_next_pos:
                 shipyard.next_action = ShipyardAction.SPAWN
