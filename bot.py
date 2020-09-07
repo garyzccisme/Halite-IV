@@ -23,6 +23,7 @@ class BronzeBot:
             (0, 0): None,
         }
 
+        # TODO: legacy attributes
         self.halite_map = None
         self.unit_map = None
 
@@ -108,7 +109,6 @@ class BronzeBot:
             'enemy_shipyard': enemy_shipyard,
         }
 
-    # TODO: Figure out endless waiting
     def navigate(self, ship: Ship, des: Point):
         """
         Navigate ship to destination, give out optimal action for current turn.
