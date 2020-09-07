@@ -109,13 +109,12 @@ class BronzeBot:
         }
 
     # TODO: Figure out endless waiting
-    def navigate(self, ship: Ship, des: Point, max_wait_turn: int = 2):
+    def navigate(self, ship: Ship, des: Point):
         """
         Navigate ship to destination, give out optimal action for current turn.
         Args:
             ship: Ship.
             des: destination position.
-            max_wait_turn: max number of waiting turns. If ship waits more than it, then make detour.
         """
         # There are actually 4 different paths, here we just choose the direct one
         move_x, move_y = unify_pos(des, self.size) - ship.position
@@ -135,16 +134,15 @@ class BronzeBot:
 
         # Case 1: Randomly choose an action in candidate_move.
         # Case 2: Immediately make detour given dangerous_move.
-        # Case 3: Check self.ship_wait_log, if waits more than max_wait_turn then make detour, else wait.
+        # Case 3: Add WAIT order in candidate_move, so the ship has probability to detour or wait.
         if candidate_move:
             ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
         elif dangerous_move:
-            self.make_detour(ship, dangerous_move)
+            self.make_detour(ship, dangerous_move, wait_prob=0)
         else:
-            if self.ship_wait_log.get(ship.id, 0) > max_wait_turn:
-                self.make_detour(ship, wait_move)
+            self.make_detour(ship, wait_move, wait_prob=0.5)
 
-    def make_detour(self, ship, not_move_list):
+    def make_detour(self, ship, not_move_list, wait_prob: float = 0):
         """
         Randomly assign the ship with an available move action excluding from not_move_list.
         If there's no such move action, then ship.next_action = None.
@@ -154,8 +152,11 @@ class BronzeBot:
             if move not in not_move_list:
                 if self.case_analysis(ship, move) == 'MOVE':
                     candidate_move.append(move)
-                    ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
-                ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
+        if wait_prob == 0.5:
+            candidate_move += [(0, 0)] * len(candidate_move)
+        elif wait_prob != 0:
+            raise ValueError('Invalid wait_prob value, only 0 or 0.5 is allowed.')
+        ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
 
     def case_analysis(self, ship, move) -> str:
         """
@@ -350,36 +351,29 @@ class BronzeBot:
             convert_ship.next_action = ShipAction.CONVERT
             self.ship_state[convert_ship.id] = 'CONVERT'
 
-    def update_ship_logs(self, ship):
+    def update_ship_next_pos(self, ship):
         """
-        Update self.ship_wait_log & self.ship_next_pos by ship.next_action
+        Update self.ship_next_pos by ship.next_action for next turn.
         """
         pos = ship.position
         if ship.next_action is None:
             self.ship_next_pos.add(pos)
-            self.ship_wait_log[ship.id] = self.ship_wait_log.get(ship.id, 0) + 1
-        else:
-            self.ship_wait_log[ship.id] = 0
-            if ship.next_action != ShipAction.CONVERT:
-                if ship.next_action == ShipAction.NORTH:
-                    next_pos = unify_pos(pos + (0, 1), self.size)
-                elif ship.next_action == ShipAction.SOUTH:
-                    next_pos = unify_pos(pos + (0, -1), self.size)
-                elif ship.next_action == ShipAction.WEST:
-                    next_pos = unify_pos(pos + (-1, 0), self.size)
-                else:
-                    next_pos = unify_pos(pos + (1, 0), self.size)
-                self.ship_next_pos.add(next_pos)
+        elif ship.next_action != ShipAction.CONVERT:
+            if ship.next_action == ShipAction.NORTH:
+                next_pos = unify_pos(pos + (0, 1), self.size)
+            elif ship.next_action == ShipAction.SOUTH:
+                next_pos = unify_pos(pos + (0, -1), self.size)
+            elif ship.next_action == ShipAction.WEST:
+                next_pos = unify_pos(pos + (-1, 0), self.size)
+            else:
+                next_pos = unify_pos(pos + (1, 0), self.size)
+            self.ship_next_pos.add(next_pos)
 
     def play(self, radar_dis=2, deposit_halite=500, security_dis=1, max_ship=5):
         """
         Main Function
         """
         print('MY TURN {}'.format(self.board.observation['step']))
-
-        # Reset self.ship_next_pos
-        self.ship_next_pos = set()
-
         print('- spawn command')
         self.spawn_command(max_ship)
 
@@ -389,7 +383,7 @@ class BronzeBot:
         for ship in self.me.ships:
             print('-- command {}'.format(ship.id))
             self.ship_command(ship, radar_dis, deposit_halite, security_dis)
-            self.update_ship_logs(ship)
+            self.update_ship_next_pos(ship)
             print('---- ship state: {}'.format(self.ship_state[ship.id]))
             print('---- ship next action: {}'.format(ship.next_action))
             print('---- ship halite: {}'.format(ship.halite))
