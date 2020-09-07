@@ -141,7 +141,7 @@ class BronzeBot:
         elif dangerous_move:
             self.make_detour(ship, dangerous_move)
         else:
-            if self.ship_wait_log.get(ship.id) > max_wait_turn:
+            if self.ship_wait_log.get(ship.id, 0) > max_wait_turn:
                 self.make_detour(ship, wait_move)
 
     def make_detour(self, ship, not_move_list):
