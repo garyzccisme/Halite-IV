@@ -229,17 +229,19 @@ class SilverBot:
         return close_enemy
 
     def explore_command(self, ship: Ship, radar: dict, deposit_halite: int = 500,
-                        security_dis: int = 1, convert_sum: float = 2000):
+                        security_dis: int = 1, convert_sum: float = 1000):
         """
         Command function for EXPLORE.
 
         Strategy 1: if ship state is EXPLORE, navigate to the position with max free halite.
         Strategy 2: if ship is in the max free halite position, turn EXPLORE to COLLECT.
-        Strategy 3: if ship radar area free halite sum is over convert_sum, then CONVERT.
+        Strategy 3: if ship radar area free halite is rich, and there's not ally shipyard nearby then CONVERT.
         """
 
-        # Calculate sum of free halite excluding the ship cell.
-        if np.sum(list(radar['free_halite'].values())) - radar['free_halite'][ship.position] >= convert_sum:
+        # Sum up radar area free halite excluding ship current cell.
+        free_halite_sum = np.sum(list(radar['free_halite'].values())) - radar['free_halite'][ship.position]
+        # Check if this area is rich and hasn't been developed.
+        if free_halite_sum >= convert_sum and not radar['ally_shipyard']:
             ship.next_action = ShipAction.CONVERT
             self.ship_state[ship.id] = 'CONVERT'
         else:
@@ -285,7 +287,6 @@ class SilverBot:
         # Strategy 1: if ship is in a shipyard, and ship.halite is 0, turn DEPOSIT to EXPLORE.
         # Strategy 2: if ship state is DEPOSIT, navigate to nearest shipyard.
         # Strategy 3: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE.
-        # Strategy 4: if ship halite is more than deposit_halite and around by more than 2 enemy ships, CONVERT.
         if self.ship_state[ship.id] == 'DEPOSIT':
 
             # If ship has deposited halite to shipyard, assign EXPLORE to ship.
@@ -293,17 +294,12 @@ class SilverBot:
                 self.ship_state[ship.id] = 'EXPLORE'
                 self.ship_command(ship, radar_dis, deposit_halite, security_dis)
             else:
-                close_enemy = self.find_close_enemy(ship, security_dis)
+                # Collect enough halite, back to shipyard.
                 if ship.halite >= deposit_halite:
-                    if len(close_enemy) <= 2:
-                        self.course_reversal(ship)
-                    else:
-                        # If close enemy ships are more than 2, then let ship CONVERT.
-                        ship.next_action = ShipAction.CONVERT
-                        self.ship_state[ship.id] = 'CONVERT'
+                    self.course_reversal(ship)
                 else:
                     # Clear, ship back to EXPLORE.
-                    if len(close_enemy) == 0:
+                    if not self.find_close_enemy(ship, security_dis):
                         self.ship_state[ship.id] = 'EXPLORE'
                         self.ship_command(ship, radar_dis, deposit_halite, security_dis)
                     else:
