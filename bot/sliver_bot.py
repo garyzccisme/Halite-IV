@@ -25,6 +25,7 @@ class SilverBot:
             (0, 0): None,
         }
 
+        # TODO: legacy
         self.halite_map = None
         self.unit_map = None
 
@@ -34,6 +35,7 @@ class SilverBot:
         self.ship_next_pos = set()
         self.ship_wait_log = {}
 
+    # TODO: legacy
     def get_map(self):
         """
         In the beginning of each turn, update halite & unit map.
@@ -140,8 +142,8 @@ class SilverBot:
 
     def make_detour(self, ship, not_move_list, wait_prob: float = 0):
         """
-        Strategy 1: Randomly assign the ship with an available move action excluding from not_move_list.
-        Strategy 2(New): If there's no such move action and wait_prob = 0, check if ship.halite > ConvertCost.
+        Strategy_1: Randomly assign the ship with an available move action excluding from not_move_list.
+        Strategy_2(New): If there's no such move action and wait_prob = 0, check if ship.halite > ConvertCost.
             If so then CONVERT, else leave the ship WAIT.
         """
         candidate_move = []
@@ -241,9 +243,9 @@ class SilverBot:
         """
         Command function for EXPLORE.
 
-        Strategy 1: if ship state is EXPLORE, navigate to the position with max free halite.
-        Strategy 2: if ship is in the max free halite position, turn EXPLORE to COLLECT.
-        Strategy 3(New): if ship radar area free halite is rich, and there's not ally shipyard nearby then CONVERT.
+        Strategy_1: if ship state is EXPLORE, navigate to the position with max free halite.
+        Strategy_2: if ship is in the max free halite position, turn EXPLORE to COLLECT.
+        Strategy_3(New): if ship radar area free halite is rich, and there's not ally shipyard nearby then CONVERT.
         """
 
         # Sum up radar area halite excluding ship current cell.
@@ -273,7 +275,8 @@ class SilverBot:
                     des = random.choice(candidate)
                     self.navigate(ship, des)
 
-    def ship_command(self, ship: Ship, radar_dis: int = 2, deposit_halite: int = 500, security_dis: int = 1):
+    def ship_command(self, ship: Ship, radar_dis: int = 2, deposit_halite: int = 500,
+                     security_dis: int = 1, convert_sum: float = 1000):
         """
         For each turn, update action of each ship.
 
@@ -282,6 +285,7 @@ class SilverBot:
             radar_dis: The radar scan distance of ship.
             deposit_halite: The threshold halite value for ship to hold.
             security_dis: The distance for security check.
+            convert_sum: The threshold of EXPLORE ship to CONVERT to shipyard.
         """
         # Before giving action, do radar first.
         self.radar(ship, radar_dis)
@@ -292,9 +296,9 @@ class SilverBot:
             self.ship_state[ship.id] = 'EXPLORE'
 
         # DEPOSIT
-        # Strategy 1: if ship is in a shipyard, and ship.halite is 0, turn DEPOSIT to EXPLORE.
-        # Strategy 2: if ship state is DEPOSIT, navigate to nearest shipyard.
-        # Strategy 3: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE.
+        # Strategy_1: if ship is in a shipyard, and ship.halite is 0, turn DEPOSIT to EXPLORE.
+        # Strategy_2: if ship state is DEPOSIT, navigate to nearest shipyard.
+        # Strategy_3: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE.
         if self.ship_state[ship.id] == 'DEPOSIT':
             # If ship has deposited halite to shipyard, assign EXPLORE to ship.
             if ship.cell.shipyard and ship.halite == 0:
@@ -319,18 +323,18 @@ class SilverBot:
                 self.ship_state[ship.id] = 'DEPOSIT'
                 self.ship_command(ship, radar_dis, deposit_halite, security_dis)
             else:
-                self.explore_command(ship, radar, deposit_halite, security_dis)
+                self.explore_command(ship, radar, deposit_halite, security_dis, convert_sum)
 
         # COLLECT
-        # Strategy 1: if ship halite reaches deposit_halite, turn COLLECT to DEPOSIT
-        # Strategy 2: if enemy ship shows in radar, turn COLLECT TO DEPOSIT
+        # Strategy_1: if ship halite reaches deposit_halite, turn COLLECT to DEPOSIT
+        # Strategy_2: if enemy ship shows in radar, turn COLLECT TO DEPOSIT
         elif self.ship_state[ship.id] == 'COLLECT':
             if ship.halite >= deposit_halite:
                 self.ship_state[ship.id] = 'DEPOSIT'
                 self.ship_command(ship, radar_dis, deposit_halite, security_dis)
             else:
                 if not self.find_close_enemy(ship, security_dis):
-                    self.explore_command(ship, radar, deposit_halite, security_dis)
+                    self.explore_command(ship, radar, deposit_halite, security_dis, convert_sum)
                 else:
                     self.ship_state[ship.id] = 'DEPOSIT'
                     self.course_reversal(ship)
@@ -351,7 +355,9 @@ class SilverBot:
             if not shipyard.cell.ship:
                 empty_shipyard.append(shipyard)
                 self.radar(shipyard, dis=2)
-        empty_shipyard.sort(key=lambda x: np.sum(self.unit_radar[x.id]['free_halite']))
+        empty_shipyard.sort(key=lambda x: np.sum(
+            list(self.unit_radar[x.id]['free_halite'].values())
+        ))
 
         # Dynamically set up the max_num_ship, keep me having the max number of ship.
         for player in self.obs.players:
@@ -401,13 +407,11 @@ class SilverBot:
                 next_pos = unify_pos(pos + (1, 0), self.size)
             self.ship_next_pos.add(next_pos)
 
-    def play(self, radar_dis=2, deposit_halite=500, security_dis=1, max_ship=5):
+    def play(self, radar_dis=2, deposit_halite=500, security_dis=1, convert_sum: float = 1000, max_ship=5):
         """
         Main Function
         """
         # print('MY TURN {}'.format(self.board.observation['step']))
-        self.get_map()
-
         # print('- spawn command')
         self.spawn_command(max_ship)
 
@@ -416,7 +420,7 @@ class SilverBot:
 
         for ship in self.me.ships:
             # print('-- command {}'.format(ship.id))
-            self.ship_command(ship, radar_dis, deposit_halite, security_dis)
+            self.ship_command(ship, radar_dis, deposit_halite, security_dis, convert_sum)
             self.update_ship_next_pos(ship)
             # print('---- ship state: {}'.format(self.ship_state[ship.id]))
             # print('---- ship next action: {}'.format(ship.next_action))
