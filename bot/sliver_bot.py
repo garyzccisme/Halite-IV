@@ -7,10 +7,9 @@ from helper import *
 from kaggle_helpers import *
 
 
-class SilverBot(Bot):
+class SilverBot:
 
     def __init__(self, obs, config):
-        super().__init__(obs, config)
         self.obs = obs
         self.config = config
         self.board = Board(obs, config)
@@ -25,11 +24,35 @@ class SilverBot(Bot):
             (0, 0): None,
         }
 
+        self.halite_map = None
+        self.unit_map = None
+
         self.unit_radar = {}
         self.radar_params = {}
         self.ship_state = {}
         self.ship_next_pos = set()
         self.ship_wait_log = {}
+
+    def get_map(self):
+        """
+        In the beginning of each turn, update halite & unit map.
+        """
+        # Rotate the halite map so that 2-D Point can be used as an array index
+        self.halite_map = np.rot90(np.reshape(self.board.observation['halite'], (self.size, self.size)), k=3)
+
+        # Initialize unit map with all zeros
+        self.unit_map = np.zeros((self.size, self.size))
+        for i, (_, shipyards, ships) in enumerate(self.board.observation['players']):
+            if i == self.me.id:
+                for index in shipyards.values():
+                    self.unit_map[index_to_position(index, self.size)] += 2
+                for index, _ in ships.values():
+                    self.unit_map[index_to_position(index, self.size)] += 1
+            else:
+                for index in shipyards.values():
+                    self.unit_map[index_to_position(index, self.size)] += -2
+                for index, _ in ships.values():
+                    self.unit_map[index_to_position(index, self.size)] += -1
 
     # TODO: refactor for efficiency
     def radar(self, unit: Ship, dis: int = 2):
@@ -205,32 +228,40 @@ class SilverBot(Bot):
                 close_enemy.append(enemy_pos)
         return close_enemy
 
-    def explore_command(self, ship: Ship, radar: dict, deposit_halite: int = 500, security_dis: int = 1):
+    def explore_command(self, ship: Ship, radar: dict, deposit_halite: int = 500,
+                        security_dis: int = 1, convert_sum: float = 2000):
         """
         Command function for EXPLORE.
 
         Strategy 1: if ship state is EXPLORE, navigate to the position with max free halite.
         Strategy 2: if ship is in the max free halite position, turn EXPLORE to COLLECT.
+        Strategy 3: if ship radar area free halite sum is over convert_sum, then CONVERT.
         """
-        max_free_halite = np.max(list(radar['free_halite'].values()))
 
-        # Check if ship has arrived max free halite position
-        if radar['free_halite'][ship.position] == max_free_halite:
-            # Change ship state, ship.next_action = None
-            self.ship_state[ship.id] = 'COLLECT'
+        # Calculate sum of free halite excluding the ship cell.
+        if np.sum(list(radar['free_halite'].values())) - radar['free_halite'][ship.position] >= convert_sum:
+            ship.next_action = ShipAction.CONVERT
+            self.ship_state[ship.id] = 'CONVERT'
         else:
-            # If there's no halite, expand radar distance
-            if max_free_halite == 0:
-                self.ship_command(ship, radar['dis'] + 1, deposit_halite, security_dis)
-            else:
-                candidate = []
-                for pos, free_halite in radar['free_halite'].items():
-                    if free_halite == max_free_halite:
-                        candidate.append(pos)
+            max_free_halite = np.max(list(radar['free_halite'].values()))
 
-                # Randomly choose a destination from candidate
-                des = random.choice(candidate)
-                self.navigate(ship, des)
+            # Check if ship has arrived max free halite position
+            if radar['free_halite'][ship.position] == max_free_halite:
+                # Change ship state, ship.next_action = None
+                self.ship_state[ship.id] = 'COLLECT'
+            else:
+                # If there's no halite, expand radar distance
+                if max_free_halite == 0:
+                    self.ship_command(ship, radar['dis'] + 1, deposit_halite, security_dis)
+                else:
+                    candidate = []
+                    for pos, free_halite in radar['free_halite'].items():
+                        if free_halite == max_free_halite:
+                            candidate.append(pos)
+
+                    # Randomly choose a destination from candidate
+                    des = random.choice(candidate)
+                    self.navigate(ship, des)
 
     def ship_command(self, ship: Ship, radar_dis: int = 2, deposit_halite: int = 500, security_dis: int = 1):
         """
@@ -242,7 +273,7 @@ class SilverBot(Bot):
             deposit_halite: The threshold halite value for ship to hold.
             security_dis: The distance for security check.
         """
-        # Before giving action, do radar first
+        # Before giving action, do radar first.
         self.radar(ship, radar_dis)
         radar = self.unit_radar[ship.id]
 
@@ -251,9 +282,10 @@ class SilverBot(Bot):
             self.ship_state[ship.id] = 'EXPLORE'
 
         # DEPOSIT
-        # Strategy 1: if ship is in a shipyard, and ship.halite is 0, turn DEPOSIT to EXPLORE
-        # Strategy 2: if ship state is DEPOSIT, navigate to nearest shipyard
-        # Strategy 3: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE
+        # Strategy 1: if ship is in a shipyard, and ship.halite is 0, turn DEPOSIT to EXPLORE.
+        # Strategy 2: if ship state is DEPOSIT, navigate to nearest shipyard.
+        # Strategy 3: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE.
+        # Strategy 4: if ship halite is more than deposit_halite and around by more than 2 enemy ships, CONVERT.
         if self.ship_state[ship.id] == 'DEPOSIT':
 
             # If ship has deposited halite to shipyard, assign EXPLORE to ship.
@@ -261,10 +293,17 @@ class SilverBot(Bot):
                 self.ship_state[ship.id] = 'EXPLORE'
                 self.ship_command(ship, radar_dis, deposit_halite, security_dis)
             else:
+                close_enemy = self.find_close_enemy(ship, security_dis)
                 if ship.halite >= deposit_halite:
-                    self.course_reversal(ship)
+                    if len(close_enemy) <= 2:
+                        self.course_reversal(ship)
+                    else:
+                        # If close enemy ships are more than 2, then let ship CONVERT.
+                        ship.next_action = ShipAction.CONVERT
+                        self.ship_state[ship.id] = 'CONVERT'
                 else:
-                    if not self.find_close_enemy(ship, security_dis):
+                    # Clear, ship back to EXPLORE.
+                    if len(close_enemy) == 0:
                         self.ship_state[ship.id] = 'EXPLORE'
                         self.ship_command(ship, radar_dis, deposit_halite, security_dis)
                     else:
@@ -351,6 +390,8 @@ class SilverBot(Bot):
         Main Function
         """
         # print('MY TURN {}'.format(self.board.observation['step']))
+        self.get_map()
+
         # print('- spawn command')
         self.spawn_command(max_ship)
 
