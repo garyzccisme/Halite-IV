@@ -32,15 +32,26 @@ Halite Game Competition by Two Sigma
 
 # Game Strategy
 ## Bronze Bot
-- Ship Strategy:
+- **Ship Strategy**:
     - `EXPLORE`: The only mission is to get to the `max halite position`. `ship.next_action` is chosen from
      `[ShipAction.NORTH, ShipAction.SOUTH, ShipAction.EAST, ShipAction.WEST]`. Once ship arrives, turn ship state to
      `COLLECT`. 
     - `COLLECT`: `ship.next_action = None` until `ship.halite` reaches threshold value or detect enemy ships nearby.
     - `DEPOSIT`: Navigate ship to nearest `shipyard`. If `ship.halite < threshold` and confirm safety, then turn ship
      state to `EXPLORE`.
-- Shipyard Strategy:
-    - `CONVERT`:
-    - `SPAWN`:
- 
+
 ![alt text](https://app.lucidchart.com/publicSegments/view/4d9c59d5-1f32-4c9e-9afc-5ae6efff226e/image.png)
+
+- **Ship Move Strategy**:
+    - `MOVE`: If there's any available direct way to destination, randomly choose one from `candicate_move` list.
+    - `DETOUR`: If there's any danger in the direct way, call `self.make_detour(ship, wait_prob=0)` to let ship move in
+     another direction immediately.
+    - `WAIT`: If there's unavailable but not dangerous case in the direct way. Call `self.make_detour(ship, wait_prob
+    =0.5)` so that ship has 0.5 & 0.5 probability to wait and detour.
+    
+- **Shipyard Strategy**:
+    - `CONVERT`: For `BronzeBot`, there's only one shipyard. Ship at lowest halite cell will convert if the shipyard
+     is destroyed.
+    - `SPAWN`: Given a maximum ship number, the shipyard will continuous spawn ships.
+    
+## Silver Bot
