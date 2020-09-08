@@ -1,4 +1,5 @@
 import random
+from typing import Union
 
 import numpy as np
 
@@ -55,13 +56,13 @@ class SilverBot:
                     self.unit_map[index_to_position(index, self.size)] += -1
 
     # TODO: refactor for efficiency
-    def radar(self, unit: Ship, dis: int = 2):
+    def radar(self, unit: Union[Ship, Shipyard], dis: int = 2):
         """
         Radar Scanning for ship & shipyard.
         Gather information of [ally, enemy, halite, free halite].
         Note: free halite here is estimated gain given number of turns in free area.
         Args:
-            unit: ship or shipyard
+            unit: Ship or Shipyard
             dis: Manhattan Distance for radar scanning
         """
         pos = unit.position
@@ -334,27 +335,39 @@ class SilverBot:
                     self.ship_state[ship.id] = 'DEPOSIT'
                     self.course_reversal(ship)
 
-    def spawn_command(self, max_ship: int = 5):
+    def spawn_command(self, max_num_ship):
         """
         Command function for shipyard to SPAWN ship.
 
-        Strategy: keep ship number in max_ship.
+        Strategy_1(New): Sort empty_shipyard list so that spawning from richest shipyard.
+        Strategy_2(New): Dynamically control the max_num_ship, keep me holding the most number of ships in the game.
+
         Args:
-            max_ship: The upper limit of ships.
+            max_num_ship: The upper limit of ships.
         """
-        empty_shipyard = [shipyard for shipyard in self.me.shipyards if not shipyard.cell.ship]
+        # Gather all empty shipyard and sort by radar area's free_halite sum value.
+        empty_shipyard = []
+        for shipyard in self.me.shipyards:
+            if not shipyard.cell.ship:
+                empty_shipyard.append(shipyard)
+                self.radar(shipyard, dis=2)
+        empty_shipyard.sort(key=lambda x: np.sum(self.unit_radar[x.id]['free_halite']))
+
+        # Dynamically set up the max_num_ship, keep me having the max number of ship.
+        for player in self.obs.players:
+            max_num_ship = max(max_num_ship, len(player[-1]))
+
         new_ship = 0
         # Spawn Condition:
         # 1. There are available empty shipyards.
-        # 2. Current and next turn ship number is lower than max_ship.
+        # 2. Current and next turn ship number is lower than max_num_ship.
         # 3. Player's halite is more than Spawn Cost.
-        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_ship and self.me.halite > self.config['spawnCost']:
-            shipyard = empty_shipyard.pop(0)
-            if shipyard.position not in self.ship_next_pos:
-                shipyard.next_action = ShipyardAction.SPAWN
-                new_ship += 1
-                # Add new ship position into self.ship_next_pos
-                self.ship_next_pos.add(shipyard.position)
+        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_num_ship and self.me.halite > self.config['spawnCost']:
+            shipyard = empty_shipyard.pop()
+            shipyard.next_action = ShipyardAction.SPAWN
+            new_ship += 1
+            # Add new ship position into self.ship_next_pos
+            self.ship_next_pos.add(shipyard.position)
 
     def convert_base_command(self):
         """
