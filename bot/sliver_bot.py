@@ -139,8 +139,9 @@ class SilverBot:
 
     def make_detour(self, ship, not_move_list, wait_prob: float = 0):
         """
-        Randomly assign the ship with an available move action excluding from not_move_list.
-        If there's no such move action, then ship.next_action = None.
+        Strategy 1: Randomly assign the ship with an available move action excluding from not_move_list.
+        Strategy 2(New): If there's no such move action and wait_prob = 0, check if ship.halite > ConvertCost.
+            If so then CONVERT, else leave the ship WAIT.
         """
         candidate_move = []
         for move in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
@@ -151,8 +152,14 @@ class SilverBot:
             candidate_move += [(0, 0)] * len(candidate_move)
         elif wait_prob != 0:
             raise ValueError('Invalid wait_prob value, only 0 or 0.5 is allowed.')
+
+        # Randomly choose a move order for ship.
         if candidate_move:
             ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
+        # If not able to move, check ship.halite and convert.
+        elif wait_prob == 0 and ship.halite >= self.config['convertCost']:
+            ship.next_action = ShipAction.CONVERT
+            self.ship_state[ship.id] = 'CONVERT'
 
     def case_analysis(self, ship, move) -> str:
         """
@@ -235,13 +242,13 @@ class SilverBot:
 
         Strategy 1: if ship state is EXPLORE, navigate to the position with max free halite.
         Strategy 2: if ship is in the max free halite position, turn EXPLORE to COLLECT.
-        Strategy 3: if ship radar area free halite is rich, and there's not ally shipyard nearby then CONVERT.
+        Strategy 3(New): if ship radar area free halite is rich, and there's not ally shipyard nearby then CONVERT.
         """
 
-        # Sum up radar area free halite excluding ship current cell.
-        free_halite_sum = np.sum(list(radar['free_halite'].values())) - radar['free_halite'][ship.position]
+        # Sum up radar area halite excluding ship current cell.
+        halite_sum = np.sum(list(radar['halite'].values())) - ship.cell.halite
         # Check if this area is rich and hasn't been developed.
-        if free_halite_sum >= convert_sum and not radar['ally_shipyard']:
+        if halite_sum >= convert_sum and not radar['ally_shipyard'] and not ship.cell.shipyard:
             ship.next_action = ShipAction.CONVERT
             self.ship_state[ship.id] = 'CONVERT'
         else:
@@ -288,7 +295,6 @@ class SilverBot:
         # Strategy 2: if ship state is DEPOSIT, navigate to nearest shipyard.
         # Strategy 3: if ship halite is lower than deposit_halite and radar is clear, turn DEPOSIT to EXPLORE.
         if self.ship_state[ship.id] == 'DEPOSIT':
-
             # If ship has deposited halite to shipyard, assign EXPLORE to ship.
             if ship.cell.shipyard and ship.halite == 0:
                 self.ship_state[ship.id] = 'EXPLORE'
@@ -303,7 +309,7 @@ class SilverBot:
                         self.ship_state[ship.id] = 'EXPLORE'
                         self.ship_command(ship, radar_dis, deposit_halite, security_dis)
                     else:
-                        # Enemy is close, stick to DEPOSIT ship state.
+                        # Enemy is nearby, stick to DEPOSIT ship state.
                         self.course_reversal(ship)
 
         # EXPLORE
