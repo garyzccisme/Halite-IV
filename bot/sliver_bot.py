@@ -356,9 +356,10 @@ class SilverBot:
                 # Add new ship position into self.ship_next_pos
                 self.ship_next_pos.add(shipyard.position)
 
-    def convert_command(self):
+    def convert_base_command(self):
         """
-        Command function for ship to CONVERT to shipyard.
+        Command function for ship to CONVERT to shipyard. This is base strategy to ensure there's always at least one
+        shipyard.
 
         Strategy: if there's no shipyard, randomly pick a ship with min cell halite to convert.
         """
@@ -398,7 +399,7 @@ class SilverBot:
         self.spawn_command(max_ship)
 
         # print('- convert command')
-        self.convert_command()
+        self.convert_base_command()
 
         for ship in self.me.ships:
             # print('-- command {}'.format(ship.id))
