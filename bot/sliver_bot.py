@@ -1,3 +1,4 @@
+import itertools
 import random
 from typing import Union
 
@@ -114,8 +115,9 @@ class SilverBot:
             ship: Ship.
             des: destination position.
         """
-        # There are actually 4 different paths, here we just choose the direct one
+        # There are actually 4 different paths, find out the shortest one.
         move_x, move_y = unify_pos(des, self.size) - ship.position
+        move_x, move_y = get_shorter_move(move_x, self.size), get_shorter_move(move_y, self.size)
 
         candidate_move = []
         dangerous_move = []
@@ -159,8 +161,8 @@ class SilverBot:
         # Randomly choose a move order for ship.
         if candidate_move:
             ship.next_action = self.SHIP_ACTION_DICT[random.choice(candidate_move)]
-        # If not able to move, check ship.halite and convert.
-        elif wait_prob == 0 and ship.halite >= self.config['convertCost']:
+        # If not able to move, then CONVERT.
+        elif wait_prob == 0 and ship.halite >= self.config.convertCost:
             ship.next_action = ShipAction.CONVERT
             self.ship_state[ship.id] = 'CONVERT'
 
@@ -368,7 +370,7 @@ class SilverBot:
         # 1. There are available empty shipyards.
         # 2. Current and next turn ship number is lower than max_num_ship.
         # 3. Player's halite is more than Spawn Cost.
-        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_num_ship and self.me.halite > self.config['spawnCost']:
+        while len(empty_shipyard) > 0 and len(self.me.ships) + new_ship < max_num_ship and self.me.halite > self.config.spawnCost:
             shipyard = empty_shipyard.pop()
             shipyard.next_action = ShipyardAction.SPAWN
             new_ship += 1
@@ -398,32 +400,38 @@ class SilverBot:
             self.ship_next_pos.add(pos)
         elif ship.next_action != ShipAction.CONVERT:
             if ship.next_action == ShipAction.NORTH:
-                next_pos = unify_pos(pos + (0, 1), self.size)
+                next_pos = pos + (0, 1)
             elif ship.next_action == ShipAction.SOUTH:
-                next_pos = unify_pos(pos + (0, -1), self.size)
+                next_pos = pos + (0, -1)
             elif ship.next_action == ShipAction.WEST:
-                next_pos = unify_pos(pos + (-1, 0), self.size)
+                next_pos = pos + (-1, 0)
             else:
-                next_pos = unify_pos(pos + (1, 0), self.size)
-            self.ship_next_pos.add(next_pos)
+                next_pos = pos + (1, 0)
+            self.ship_next_pos.add(unify_pos(next_pos, self.size))
 
     def play(self, radar_dis=2, deposit_halite=500, security_dis=1, convert_sum: float = 1000, max_ship=5):
         """
         Main Function
+
+        Regular flow: SPAWN -> CONVERT -> SHIP MOVE.
+        Ending case: CONVERT all ships with enough halite.
         """
         # print('MY TURN {}'.format(self.board.observation['step']))
-        # print('- spawn command')
-        self.spawn_command(max_ship)
+        # Strategy: if the current turn is 398 (last turn is 399), make all ships with enough halite CONVERT.
+        if self.obs.step == 398:
+            for ship in self.me.ships:
+                if ship.halite >= self.config.convertCost:
+                    ship.next_action = ShipAction.CONVERT
+        else:
+            self.spawn_command(max_ship)
+            self.convert_base_command()
 
-        # print('- convert command')
-        self.convert_base_command()
-
-        for ship in self.me.ships:
-            # print('-- command {}'.format(ship.id))
-            self.ship_command(ship, radar_dis, deposit_halite, security_dis, convert_sum)
-            self.update_ship_next_pos(ship)
-            # print('---- ship state: {}'.format(self.ship_state[ship.id]))
-            # print('---- ship next action: {}'.format(ship.next_action))
-            # print('---- ship halite: {}'.format(ship.halite))
+            for ship in self.me.ships:
+                # print('-- command {}'.format(ship.id))
+                self.ship_command(ship, radar_dis, deposit_halite, security_dis, convert_sum)
+                self.update_ship_next_pos(ship)
+                # print('---- ship state: {}'.format(self.ship_state[ship.id]))
+                # print('---- ship next action: {}'.format(ship.next_action))
+                # print('---- ship halite: {}'.format(ship.halite))
 
         return self.me.next_actions
