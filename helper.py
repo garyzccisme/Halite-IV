@@ -41,3 +41,17 @@ def unify_pos(pos, size):
     Example: Given size = 5, Point(-2, -7) -> Point(3, 3)
     """
     return pos % size
+
+
+def get_opposite_move(move, size):
+    """
+    Given one dimension move (x or y), return the opposite move.
+    The Board is actually round, ship can move to destination by any direction.
+    Example: Give board size = 5, move = 3, opposite_move = -2.
+    """
+    if move > 0:
+        return move - size
+    elif move < 0:
+        return move + size
+    else:
+        return 0
