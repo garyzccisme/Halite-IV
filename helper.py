@@ -1,3 +1,5 @@
+import numpy as np
+
 from kaggle_helpers import Point
 
 
@@ -43,15 +45,18 @@ def unify_pos(pos, size):
     return pos % size
 
 
-def get_opposite_move(move, size):
+def get_shorter_move(move, size):
     """
-    Given one dimension move (x or y), return the opposite move.
+    Given one dimension move (x or y), return the shorter move comparing with opposite move.
     The Board is actually round, ship can move to destination by any direction.
-    Example: Give board size = 5, move = 3, opposite_move = -2.
+    Example: Give board size = 5, move = 3, opposite_move = -2, return -2 since abs(-2) < abs(3).
     """
-    if move > 0:
-        return move - size
-    elif move < 0:
-        return move + size
-    else:
+    if move == 0:
         return 0
+    elif move > 0:
+        opposite_move = move - size
+    else:
+        opposite_move = move + size
+    return min([move, opposite_move], key=abs)
+
+
