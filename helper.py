@@ -49,7 +49,7 @@ def get_shorter_move(move, size):
     """
     Given one dimension move (x or y), return the shorter move comparing with opposite move.
     The Board is actually round, ship can move to destination by any direction.
-    Example: Give board size = 5, move = 3, opposite_move = -2, return -2 since abs(-2) < abs(3).
+    Example: Given board size = 5, move = 3, opposite_move = -2, return -2 since abs(-2) < abs(3).
     """
     if move == 0:
         return 0
