@@ -55,3 +55,8 @@ Halite Game Competition by Two Sigma
     - `SPAWN`: Given a maximum ship number, the shipyard will continuous spawn ships.
     
 ## Silver Bot
+
+NEW: 
+- CONVERT
+    - dangerous situation and no move choice
+    - rich halite area

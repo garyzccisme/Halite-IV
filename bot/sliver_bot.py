@@ -63,9 +63,9 @@ class SilverBot:
         """
         Radar Scanning for ship & shipyard.
         Gather information of [ally, enemy, halite, free halite].
-        Note: free halite here is estimated gain given number of turns in free area.
+        Note: free halite is available halite here, which is estimated gain given number of turns in free area.
         Args:
-            unit: Ship or Shipyard
+            unit: Ship or shipyard
             dis: Manhattan Distance for radar scanning
         """
         pos = unit.position
@@ -78,29 +78,35 @@ class SilverBot:
             for y in range(abs(x) - dis, dis - abs(x) + 1):
 
                 scan_pos = unify_pos(pos + (x, y), self.size)
-                cell = self.board[scan_pos]
-                halite[scan_pos] = cell.halite
+                scan_cell = self.board[scan_pos]
+                halite[scan_pos] = scan_cell.halite
 
-                if scan_pos != unit.position and (cell.ship or cell.shipyard):
-                    if cell.ship:
-                        if cell.ship.player == self.me:
-                            ally_ship.append(cell.position)
+                if scan_cell.ship:
+                    if scan_cell.ship.player == self.me:
+                        if scan_pos != pos:
+                            ally_ship.append(scan_cell.position)
                         else:
-                            enemy_ship.append(cell.position)
-                    if cell.shipyard:
-                        if cell.shipyard.player == self.me:
-                            ally_shipyard.append(cell.position)
-                        else:
-                            enemy_shipyard.append(cell.position)
+                            # scan_pos == pos, add ship current position into free_halite.
+                            free_halite[scan_pos] = estimate_gain(scan_cell.halite, dis=0, t=dis + 1)
+                    else:
+                        enemy_ship.append(scan_cell.position)
+                        # Enemy ship with rich halite is considered as free_halite.
+                        if isinstance(unit, Ship) and scan_cell.ship.halite > unit.halite:
+                            free_halite[scan_pos] = estimate_gain(
+                                scan_cell.halite, dis=0, t=dis + 1) + scan_cell.ship.halite
+                elif scan_cell.shipyard:
+                    if scan_cell.shipyard.player == self.me:
+                        ally_shipyard.append(scan_cell.position)
+                    else:
+                        enemy_shipyard.append(scan_cell.position)
                 else:
-                    # Note: Different with BronzeBot, the value is float instead of list.
-                    # Estimate halite gain in scan_pos with (dis + 1) turns.
-                    # The closer the cell, the more turns ship has to collect halite.
-                    free_halite[scan_pos] = estimate_gain(cell.halite, cal_dis(pos, scan_pos), t=dis + 1)
+                    # Cell is empty, calculate estimated halite gain for (dis + 1) turns.
+                    free_halite[scan_pos] = estimate_gain(scan_cell.halite, dis=cal_dis(pos, scan_pos), t=dis + 1)
 
         self.unit_radar[unit.id] = {
             'dis': dis,
             'halite': halite,
+            # Note: Different with BronzeBot, the value is float instead of list.
             'free_halite': free_halite,
             'ally_ship': ally_ship,
             'enemy_ship': enemy_ship,
