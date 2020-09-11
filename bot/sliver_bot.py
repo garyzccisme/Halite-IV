@@ -368,8 +368,29 @@ class SilverBot:
             list(self.unit_radar[x.id]['free_halite'].values())
         ))
 
-        # Dynamically set up the max_num_ship, keep me having the same number of ship with TOP 1 player.
-        max_num_ship = max(max_num_ship, len(max(self.obs.players, key=lambda x: x[0])[-1]))
+        # Dynamically control the max_num_ship.
+        if 100 <= self.obs.step < 350:
+            rank = sorted([0, 1, 2, 3], key=lambda x: self.obs.players[x][0], reverse=True)
+            # If self.me is 1st, use lead gap to spawn more ships.
+            if rank[0] == self.obs.player:
+                gap = self.me.halite - self.obs.players[rank[1]][0]
+                max_num_ship = len(self.me.ships) + gap // self.config.convertCost
+            # If self.me is 2nd, first point is to ensure 2rd position.
+            elif rank[1] == self.obs.player:
+                gap_1 = self.obs.players[rank[0]][0] - self.me.halite
+                gap_2 = self.me.halite - self.obs.players[rank[2]][0]
+                if gap_1 >= gap_2:
+                    # Conservative strategy
+                    max_num_ship = len(self.me.ships) + gap_2 * 0.25 // self.config.convertCost
+                else:
+                    # Radical strategy
+                    max_num_ship = len(self.me.ships) + gap_2 * 0.75 // self.config.convertCost
+            else:
+                # If self.me falls behind, try best to catch up.
+                max_num_ship = max(max_num_ship, self.obs.players[rank[0]][0])
+        # If game is coming to an end, stop spawning new ships aggressively.
+        elif self.obs.step >= 350:
+            max_num_ship *= 0.25
 
         new_ship = 0
         # Spawn Condition:
