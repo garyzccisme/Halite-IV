@@ -258,8 +258,9 @@ class SilverBot:
 
         # Sum up radar area halite excluding ship current cell.
         halite_sum = np.sum(list(radar['halite'].values())) - ship.cell.halite
-        # Check if this area is rich and hasn't been developed.
-        if halite_sum >= convert_sum and not radar['ally_shipyard'] and not ship.cell.shipyard:
+        # Check if this area is rich and hasn't been developed (there's no shipyard in 4 distance area).
+        if halite_sum >= convert_sum and all(
+                [cal_dis(ship.position, shipyard.position) > 4 for shipyard in self.me.shipyards]):
             ship.next_action = ShipAction.CONVERT
             self.ship_state[ship.id] = 'CONVERT'
         else:
@@ -272,7 +273,7 @@ class SilverBot:
             else:
                 # If there's no halite, expand radar distance
                 if max_free_halite == 0:
-                    self.ship_command(ship, radar['dis'] + 1, deposit_halite, security_dis)
+                    self.ship_command(ship, radar['dis'] + 1, deposit_halite, security_dis, convert_sum)
                 else:
                     candidate = []
                     for pos, free_halite in radar['free_halite'].items():
