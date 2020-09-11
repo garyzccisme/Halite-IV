@@ -26,8 +26,9 @@ class SilverBot:
             (0, 0): None,
         }
 
-        # TODO: legacy
         self.halite_map = None
+        self.global_halite_mean = 0
+        # TODO: legacy
         self.unit_map = None
 
         self.unit_radar = {}
@@ -36,27 +37,28 @@ class SilverBot:
         self.ship_next_pos = set()
         self.ship_wait_log = {}
 
-    # TODO: legacy
     def get_map(self):
         """
         In the beginning of each turn, update halite & unit map.
         """
         # Rotate the halite map so that 2-D Point can be used as an array index
         self.halite_map = np.rot90(np.reshape(self.board.observation['halite'], (self.size, self.size)), k=3)
+        self.global_halite_mean = self.halite_map.mean()
 
+        # TODO: legacy
         # Initialize unit map with all zeros
-        self.unit_map = np.zeros((self.size, self.size))
-        for i, (_, shipyards, ships) in enumerate(self.board.observation['players']):
-            if i == self.me.id:
-                for index in shipyards.values():
-                    self.unit_map[index_to_position(index, self.size)] += 2
-                for index, _ in ships.values():
-                    self.unit_map[index_to_position(index, self.size)] += 1
-            else:
-                for index in shipyards.values():
-                    self.unit_map[index_to_position(index, self.size)] += -2
-                for index, _ in ships.values():
-                    self.unit_map[index_to_position(index, self.size)] += -1
+        # self.unit_map = np.zeros((self.size, self.size))
+        # for i, (_, shipyards, ships) in enumerate(self.board.observation['players']):
+        #     if i == self.me.id:
+        #         for index in shipyards.values():
+        #             self.unit_map[index_to_position(index, self.size)] += 2
+        #         for index, _ in ships.values():
+        #             self.unit_map[index_to_position(index, self.size)] += 1
+        #     else:
+        #         for index in shipyards.values():
+        #             self.unit_map[index_to_position(index, self.size)] += -2
+        #         for index, _ in ships.values():
+        #             self.unit_map[index_to_position(index, self.size)] += -1
 
     # TODO: refactor for efficiency
     def radar(self, unit: Union[Ship, Shipyard], dis: int = 2):
@@ -265,14 +267,13 @@ class SilverBot:
             self.ship_state[ship.id] = 'CONVERT'
         else:
             max_free_halite = np.max(list(radar['free_halite'].values()))
-
             # Check if ship has arrived max free halite position
             if radar['free_halite'][ship.position] == max_free_halite:
                 # Change ship state, ship.next_action = None
                 self.ship_state[ship.id] = 'COLLECT'
             else:
-                # If there's no halite, expand radar distance
-                if max_free_halite == 0:
+                # If there's lack of halite, expand radar distance
+                if max_free_halite < self.global_halite_mean and radar['dis'] <= 5:
                     self.ship_command(ship, radar['dis'] + 1, deposit_halite, security_dis, convert_sum)
                 else:
                     candidate = []
@@ -370,7 +371,7 @@ class SilverBot:
 
         # Dynamically control the max_num_ship.
         if 100 <= self.obs.step < 350:
-            rank = sorted([0, 1, 2, 3], key=lambda x: self.obs.players[x][0], reverse=True)
+            rank = sorted(list(range(len(self.obs.players))), key=lambda x: self.obs.players[x][0], reverse=True)
             # If self.me is 1st, use lead gap to spawn more ships.
             if rank[0] == self.obs.player:
                 gap = self.me.halite - self.obs.players[rank[1]][0]
@@ -450,6 +451,7 @@ class SilverBot:
                 if ship.halite >= self.config.convertCost:
                     ship.next_action = ShipAction.CONVERT
         else:
+            self.get_map()
             self.spawn_command(max_ship)
             self.convert_base_command()
 
