@@ -368,9 +368,8 @@ class SilverBot:
             list(self.unit_radar[x.id]['free_halite'].values())
         ))
 
-        # Dynamically set up the max_num_ship, keep me having the max number of ship.
-        for player in self.obs.players:
-            max_num_ship = max(max_num_ship, len(player[-1]))
+        # Dynamically set up the max_num_ship, keep me having the same number of ship with TOP 1 player.
+        max_num_ship = max(max_num_ship, len(max(self.obs.players, key=lambda x: x[0])[-1]))
 
         new_ship = 0
         # Spawn Condition:
