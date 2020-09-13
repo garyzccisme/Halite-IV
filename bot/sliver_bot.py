@@ -399,7 +399,7 @@ class SilverBot:
                         max_num_ship = len(self.me.ships) + gap_2 * 0.75 // self.config.convertCost
                 else:
                     # If self.me falls behind, try best to catch up the 2rd.
-                    max_num_ship = max(max_num_ship, len(self.obs.players[rank[1]][-1]))
+                    max_num_ship = min(max_num_ship, len(self.obs.players[rank[1]][-1]))
             # If game is coming to an end, stop spawning new ships aggressively.
             elif self.obs.step >= 300:
                 max_num_ship *= 1 - (self.obs.step - 300) / 100
