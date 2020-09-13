@@ -371,10 +371,10 @@ class SilverBot:
             ))
 
             # Dynamically control the max_num_ship.
-            # Strategy_1:
-            # Strategy_2:
-            # Strategy_3:
-            if 100 <= self.obs.step < 350:
+            # Strategy_1: in [0, 100) turn, spawn ships by given max_num_ship.
+            # Strategy_2: in [100, 300) turn, spawn ships by rank.
+            # Strategy_3: in [300, 400] turn, spawn ships by given max_num_ship with decay.
+            if 100 <= self.obs.step < 300:
                 rank = sorted(list(range(len(self.obs.players))), key=lambda x: self.obs.players[x][0], reverse=True)
                 # If self.me is 1st, use lead gap to spawn more ships.
                 if rank[0] == self.obs.player:
@@ -394,8 +394,8 @@ class SilverBot:
                     # If self.me falls behind, try best to catch up.
                     max_num_ship = max(max_num_ship, self.obs.players[rank[0]][0])
             # If game is coming to an end, stop spawning new ships aggressively.
-            elif self.obs.step >= 350:
-                max_num_ship *= 0.25
+            elif self.obs.step >= 300:
+                max_num_ship *= 1 - (self.obs.step - 300) / 100
 
             new_ship = 0
             # Spawn Condition:
