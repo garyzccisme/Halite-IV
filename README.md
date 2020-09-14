@@ -56,7 +56,34 @@ Halite Game Competition by Two Sigma
     
 ## Silver Bot
 
-NEW: 
-- CONVERT
-    - dangerous situation and no move choice
-    - rich halite area
+The main structure of `SilverBot` is similar with `BronzeBot` but there're much more useful features.
+
+### New Strategy
+
+- `Attack`: ship will tend to attack enemy ship with high halite.
+- `Convert`: besides base convert strategy(always keep at least one shipyard), ship will convert to shipyard when
+ find rich halite area and when ship is around by enemy.
+- `Spawn`: dynamically spawn new ships according to current game situation.
+- `Explore`: ship will more frequently expand radar scan distance to find higher halite cell.
+- `Deposit`: if ship's halite is larger than `deposit_halite`(dynamic), then return to shipyard.
+- `End`: by the end of the game, call all ships back to shipyard so that all halite can be gathered.
+
+### What's new in code
+
+- `radar`:
+    - When scanning for `free_halite`, all enemy ships carrying higher halite will be considered as `free_halite` as
+     well. So that when ship doing `EXPLORE`, it can attack enemy ship.
+- `navigate`:
+    - Add new parameter `detour: bool` to allow ship move to destination directly with out detour. This is designed
+     for new method `final_deposit()`.
+- `course_reversal`:
+    - Same with `navigate`.
+- `explore_command`:
+    - If ship radar area free halite is rich, and there's not ally shipyard nearby then `CONVERT`.
+- `spawn_command`:
+    - Sort all shipyards by halite sum distributed around so that new ships can be spawned at rich halite area first.
+    - Dynamically control the number of ships to spawn according to current game turn, player's halite, and rank.
+- `final_deposit`:
+    - When the game is about to end, call all ships directly back to shipyards to gather halite as much as possible.
+
+### Game Simulation
