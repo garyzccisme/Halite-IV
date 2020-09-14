@@ -89,4 +89,6 @@ The main structure of `SilverBot` is similar with `BronzeBot` but there're much 
 ### Game Simulation
 [Bronze vs Bronze vs Silver vs Silver](http://localhost:63342/Halite-IV/simulated_game.html?_ijt=jl16ucd616paohn9l1bv2t6uq7)
 
+![Alt Text](https://github.com/garyzccisme/Halite-IV/blob/master/simulated_game.gif?raw=true)
+
 ### TODO
