@@ -88,9 +88,9 @@ The main structure of `SilverBot` is similar with `BronzeBot` but there're much 
 
 ### Game Simulation
 - Here is one simulated game for `Bronze vs Bronze vs Silver vs Silver`. 
-![Alt Text](https://github.com/garyzccisme/Halite-IV/blob/master/simulated_game.gif?raw=true)
-
 - If want customized the game, please use Jupyter Notebook to open `game_simulator.ipynb`.
+
+![Alt Text](https://github.com/garyzccisme/Halite-IV/blob/master/simulated_game.gif?raw=true)
 
 ### TODO
 - Although there're many dynamic strategy for `SilverBot`, it is still inflexible since there could be millions of
