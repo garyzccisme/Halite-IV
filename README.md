@@ -87,8 +87,14 @@ The main structure of `SilverBot` is similar with `BronzeBot` but there're much 
     - When the game is about to end, call all ships directly back to shipyards to gather halite as much as possible.
 
 ### Game Simulation
-[Bronze vs Bronze vs Silver vs Silver](http://localhost:63342/Halite-IV/simulated_game.html?_ijt=jl16ucd616paohn9l1bv2t6uq7)
-
+- Here is one simulated game for `Bronze vs Bronze vs Silver vs Silver`. 
 ![Alt Text](https://github.com/garyzccisme/Halite-IV/blob/master/simulated_game.gif?raw=true)
 
+- If want customized the game, please use Jupyter Notebook to open `game_simulator.ipynb`.
+
 ### TODO
+- Although there're many dynamic strategy for `SilverBot`, it is still inflexible since there could be millions of
+ situations during the game. 
+- So for next optimization, we should adopt **Reinforcement Learning** to train game AI so that it can learn to play
+ game when playing with others.
+    
