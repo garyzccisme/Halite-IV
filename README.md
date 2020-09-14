@@ -87,3 +87,6 @@ The main structure of `SilverBot` is similar with `BronzeBot` but there're much 
     - When the game is about to end, call all ships directly back to shipyards to gather halite as much as possible.
 
 ### Game Simulation
+
+
+### TO DO
