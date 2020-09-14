@@ -87,6 +87,6 @@ The main structure of `SilverBot` is similar with `BronzeBot` but there're much 
     - When the game is about to end, call all ships directly back to shipyards to gather halite as much as possible.
 
 ### Game Simulation
-
+[Bronze vs Bronze vs Silver vs Silver](http://localhost:63342/Halite-IV/simulated_game.html?_ijt=jl16ucd616paohn9l1bv2t6uq7)
 
 ### TODO
