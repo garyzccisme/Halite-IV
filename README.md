@@ -93,8 +93,8 @@ The main structure of `SilverBot` is similar with `BronzeBot` but there're much 
 ![Alt Text](https://github.com/garyzccisme/Halite-IV/blob/master/simulated_game.gif?raw=true)
 
 ### TODO
-- Although there're many dynamic strategy for `SilverBot`, it is still inflexible since there could be millions of
- situations during the game. 
-- So for next optimization, we should adopt **Reinforcement Learning** to train game AI so that it can learn to play
- game when playing with others.
+- Although there're many dynamic strategies for `SilverBot`, it is still inflexible since there could be millions of
+ different situations during the game. 
+- So for further optimization, we should adopt **Reinforcement Learning** to train game AI so that it can learn to play
+ game when fighting with others.
     
