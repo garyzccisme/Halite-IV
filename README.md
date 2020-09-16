@@ -26,7 +26,6 @@ Halite Game Competition by Two Sigma
 ## Initialization
 - The game board is 21x21 cells large. The southwest (bottom-left) corner of the board is designated `(0,0)` and the northeast (top-right) corner of the board is designated `(20,20)`. The starting player positions are at `(5,5)`, `(15,5)`, `(5,15)`, and `(15,15)`. In the game code positions are given as serialized list where each cell is an integer calculated by the formula: `position = row * 21 + column`.
 
-
 ## Note
 - The `Board` doesn't have edge. If a ship is in the side or corner, next position can be in the opposite side, e.g. in a `5 * 5` size `Board`, `ship.position = (1, 0), ship.next_action = ShipAction.South` then `ship.position = (1, 4)` in next turn.
 
